@@ -157,11 +157,12 @@ import (
 // JSON cannot represent cyclic data structures and Marshal does not
 // handle them. Passing cyclic structures to Marshal will result in
 // an error.
+// 注释：json.Marshal 的入口文件
 func Marshal(v any) ([]byte, error) {
 	e := newEncodeState()
 	defer encodeStatePool.Put(e)
 
-	err := e.marshal(v, encOpts{escapeHTML: true})
+	err := e.marshal(v, encOpts{escapeHTML: true}) // 注释：开始进入执行 json.Marshal
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +296,7 @@ func (e *encodeState) marshal(v any, opts encOpts) (err error) {
 			}
 		}
 	}()
-	e.reflectValue(reflect.ValueOf(v), opts)
+	e.reflectValue(reflect.ValueOf(v), opts) // 注释：反射 json.Marshal 的参数，并开始执行
 	return nil
 }
 
@@ -334,10 +335,10 @@ type encoderFunc func(e *encodeState, v reflect.Value, opts encOpts)
 var encoderCache sync.Map // map[reflect.Type]encoderFunc
 
 func valueEncoder(v reflect.Value) encoderFunc {
-	if !v.IsValid() {
+	if !v.IsValid() { // 注释：如果值是无效的，则组装json为null
 		return invalidValueEncoder
 	}
-	return typeEncoder(v.Type())
+	return typeEncoder(v.Type()) // 注释：根据类型选择要执行json的组装函数，和判断是否实现MarshalJSON接口
 }
 
 func typeEncoder(t reflect.Type) encoderFunc {
@@ -363,7 +364,7 @@ func typeEncoder(t reflect.Type) encoderFunc {
 	}
 
 	// Compute the real encoder and replace the indirect func with it.
-	f = newTypeEncoder(t, true)
+	f = newTypeEncoder(t, true) // 注释：如果实现MarshalJSON则执行，否则执行对应类型的函数
 	wg.Done()
 	encoderCache.Store(t, f)
 	return f
@@ -384,6 +385,13 @@ func newTypeEncoder(t reflect.Type, allowAddr bool) encoderFunc {
 	if t.Kind() != reflect.Pointer && allowAddr && reflect.PointerTo(t).Implements(marshalerType) {
 		return newCondAddrEncoder(addrMarshalerEncoder, newTypeEncoder(t, false))
 	}
+	// 注释：如果实现了MarshalJSON函数则执行该函数，
+	// 		注意:
+	//			1.这里是用入参来判定是否实现MarshalJSON方法
+	//			2.如果入参是实体，则MarshalJSON的接收器必须是实体
+	//			3.如果入参是指针，则MarshalJSON的接收器是指针或实体都可以
+	//			4.综上总结，最好MarshalJSON的接收器是实体，这样兼容是最好的。
+	// 其实这里感觉更改成(增加对指针接收器的兼容): if t.Implements(marshalerType) || reflect.PointerTo(t).Implements(marshalerType) {
 	if t.Implements(marshalerType) {
 		return marshalerEncoder
 	}
