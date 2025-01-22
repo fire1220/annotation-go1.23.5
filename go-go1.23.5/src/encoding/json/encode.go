@@ -402,6 +402,7 @@ func newTypeEncoder(t reflect.Type, allowAddr bool) encoderFunc {
 		return textMarshalerEncoder
 	}
 
+	// 注释：根据不同的类型选择对应的组装函数
 	switch t.Kind() {
 	case reflect.Bool:
 		return boolEncoder
