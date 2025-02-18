@@ -44,7 +44,8 @@ type mcache struct {
 
 	// The rest is not accessed on every malloc.
 
-	alloc [numSpanClasses]*mspan // spans to allocate from, indexed by spanClass
+	// 对应的跨度类，每个跨度类有两条（共有双倍的跨度类的数据）
+	alloc [numSpanClasses]*mspan // 注释：对应的跨度类 // spans to allocate from, indexed by spanClass
 
 	stackcache [_NumStackOrders]stackfreelist
 

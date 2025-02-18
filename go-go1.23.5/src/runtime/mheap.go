@@ -392,14 +392,18 @@ type mSpanList struct {
 	last  *mspan // last span in list, or nil if none
 }
 
+// 注释：跨度类，内存的最小单元
+// 共有68中跨度类，该结构是双向链表结构，一个跨度类可以包含多个page，每个page是8KB大小
+// 一个跨度类可以包含一个或多个page叶,用page叶起点地址（基地址）和page叶数量来表示
 type mspan struct {
 	_    sys.NotInHeap
-	next *mspan     // next span in list, or nil if none
-	prev *mspan     // previous span in list, or nil if none
+	next *mspan     // 链表上一个 // next span in list, or nil if none
+	prev *mspan     // 链表下一个 // previous span in list, or nil if none
 	list *mSpanList // For debugging.
 
-	startAddr uintptr // address of first byte of span aka s.base()
-	npages    uintptr // number of pages in span
+	// 对应page叶的基地址,和page叶数量
+	startAddr uintptr // page基地址 // address of first byte of span aka s.base()
+	npages    uintptr // page叶数量 // number of pages in span
 
 	manualFreeList gclinkptr // list of free objects in mSpanManual spans
 
@@ -436,7 +440,7 @@ type mspan struct {
 	// ctz (count trailing zero) to use it directly.
 	// allocCache may contain bits beyond s.nelems; the caller must ignore
 	// these.
-	allocCache uint64
+	allocCache uint64 // 缓存
 
 	// allocBits and gcmarkBits hold pointers to a span's mark and
 	// allocation bits. The pointers are 8 byte aligned.
