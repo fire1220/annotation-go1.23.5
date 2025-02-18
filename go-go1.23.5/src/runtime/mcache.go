@@ -16,6 +16,7 @@ import (
 //
 // mcaches are allocated from non-GC'd memory, so any heap pointers
 // must be specially handled.
+// 注释：线程缓存，线程内共享，所以无需上锁
 type mcache struct {
 	_ sys.NotInHeap
 
@@ -36,9 +37,10 @@ type mcache struct {
 	//
 	// tinyAllocs is the number of tiny allocations performed
 	// by the P that owns this mcache.
-	tiny       uintptr
-	tinyoffset uintptr
-	tinyAllocs uintptr
+	// 注释：微对象处理，微对象（无指针类型的微对象）
+	tiny       uintptr // 注释：微对象的基地址
+	tinyoffset uintptr // 注释：微对象偏移量
+	tinyAllocs uintptr // 注释：微对象分配的对象个数
 
 	// The rest is not accessed on every malloc.
 
