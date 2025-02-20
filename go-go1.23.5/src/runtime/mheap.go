@@ -81,7 +81,7 @@ type mheap struct {
 	// store. Accesses during STW might not hold the lock, but
 	// must ensure that allocation cannot happen around the
 	// access (since that may free the backing store).
-	allspans []*mspan // 存储所有的跨度类 // all spans out there
+	allspans []*mspan // 存储所有的跨度类， 包括已经分配的和空闲的 // all spans out there
 
 	// Proportional sweep
 	//
