@@ -58,12 +58,13 @@ const (
 //
 // mheap must not be heap-allocated because it contains mSpanLists,
 // which must not be heap-allocated.
+// 注释：堆内存,全局的,变量是 mheap_
 type mheap struct {
 	_ sys.NotInHeap
 
 	// lock must only be acquired on the system stack, otherwise a g
 	// could self-deadlock if its stack grows with the lock held.
-	lock mutex
+	lock mutex // 由于是全局的，所有使用时必须上锁
 
 	pages pageAlloc // page allocation data structure
 
@@ -80,7 +81,7 @@ type mheap struct {
 	// store. Accesses during STW might not hold the lock, but
 	// must ensure that allocation cannot happen around the
 	// access (since that may free the backing store).
-	allspans []*mspan // all spans out there
+	allspans []*mspan // 存储所有的跨度类 // all spans out there
 
 	// Proportional sweep
 	//
@@ -144,7 +145,7 @@ type mheap struct {
 	// platforms (even 64-bit), arenaL1Bits is 0, making this
 	// effectively a single-level map. In this case, arenas[0]
 	// will never be nil.
-	arenas [1 << arenaL1Bits]*[1 << arenaL2Bits]*heapArena
+	arenas [1 << arenaL1Bits]*[1 << arenaL2Bits]*heapArena // 把物理内存划分成多个快（heapArena）,是个二维的图结构
 
 	// arenasHugePages indicates whether arenas' L2 entries are eligible
 	// to be backed by huge pages.
@@ -237,6 +238,8 @@ var mheap_ mheap
 
 // A heapArena stores metadata for a heap arena. heapArenas are stored
 // outside of the Go heap and accessed via the mheap_.arenas index.
+// 注释：可以理解为mheap的分块存储。每一块管理多个mspan。
+// 该结构会把物理地址划分成多个mspan提供给mheap使用，mspan则管理多个page页
 type heapArena struct {
 	_ sys.NotInHeap
 
@@ -251,7 +254,7 @@ type heapArena struct {
 	// known to contain in-use or stack spans. This means there
 	// must not be a safe-point between establishing that an
 	// address is live and looking it up in the spans array.
-	spans [pagesPerArena]*mspan
+	spans [pagesPerArena]*mspan // 管理的 mspan 指针，包括使用的和未使用的。
 
 	// pageInUse is a bitmap that indicates which spans are in
 	// state mSpanInUse. This bitmap is indexed by page number,
@@ -259,7 +262,7 @@ type heapArena struct {
 	// span is used.
 	//
 	// Reads and writes are atomic.
-	pageInUse [pagesPerArena / 8]uint8
+	pageInUse [pagesPerArena / 8]uint8 // 标记已经使用的 mspan ，位表示
 
 	// pageMarks is a bitmap that indicates which spans have any
 	// marked objects on them. Like pageInUse, only the bit
@@ -300,7 +303,7 @@ type heapArena struct {
 	// address-ordered first-fit policy.
 	//
 	// Read atomically and written with an atomic CAS.
-	zeroedBase uintptr
+	zeroedBase uintptr // 指向物理内存的地址，该地址是当前heapArena的基地址
 }
 
 // arenaHint is a hint for where to grow the heap arenas. See
