@@ -932,6 +932,7 @@ func nextFreeFast(s *mspan) gclinkptr {
 //
 // Must run in a non-preemptible context since otherwise the owner of
 // c could change.
+// 注释：到mcentral中获取空间(mcentral相关函数)
 func (c *mcache) nextFree(spc spanClass) (v gclinkptr, s *mspan, shouldhelpgc bool) {
 	s = c.alloc[spc]
 	shouldhelpgc = false
@@ -1049,7 +1050,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 
 	shouldhelpgc := false
 	dataSize := userSize
-	c := getMCache(mp) // 获取mcache线程缓存
+	c := getMCache(mp) // 获取mcache线程缓存地址
 	if c == nil {
 		throw("mallocgc called without a P or outside bootstrapping")
 	}
@@ -1069,8 +1070,9 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	// a size class. In practice this is completely fine, since the largest small
 	// size class has a single object in it already, precisely to make the transition
 	// to large objects smooth.
+	// 根据要分配的大小，分为微对象、小对象、大对象三类
 	if size <= maxSmallSize-mallocHeaderSize {
-		if noscan && size < maxTinySize {
+		if noscan && size < maxTinySize { // 微对象(没有指针，并且小于16KB)
 			// Tiny allocator.
 			//
 			// Tiny allocator combines several tiny allocation requests
@@ -1102,6 +1104,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			// reduces heap size by ~20%.
 			off := c.tinyoffset
 			// Align tiny pointer for required (conservative) alignment.
+			// 偏移量内存大小对齐计算,分别向2、4、8三个等级对齐
 			if size&7 == 0 {
 				off = alignUp(off, 8)
 			} else if goarch.PtrSize == 4 && size == 12 {
@@ -1117,32 +1120,35 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			} else if size&1 == 0 {
 				off = alignUp(off, 2)
 			}
+			// 偏移量+数据<=微对象的总大小，并且微对象的基地址有值
+			// 说明微对象可以分配所需要的数据空间
 			if off+size <= maxTinySize && c.tiny != 0 {
 				// The object fits into existing tiny block.
 				x = unsafe.Pointer(c.tiny + off)
-				c.tinyoffset = off + size
-				c.tinyAllocs++
-				mp.mallocing = 0
+				c.tinyoffset = off + size // 修改新的偏移量
+				c.tinyAllocs++            // 修改分配数
+				mp.mallocing = 0          // 结束分配中标识
 				releasem(mp)
 				return x
 			}
+			// 当前mcache中微对象缓存里没有空间时需要,需要到mcache的alloc里重新拿一个，如果alloc里没有则会到mcentral中拿
 			// Allocate a new maxTinySize block.
-			span = c.alloc[tinySpanClass]
-			v := nextFreeFast(span)
+			span = c.alloc[tinySpanClass] // 获取微对象无指针的跨度类
+			v := nextFreeFast(span)       // 到mcache里获取空间
 			if v == 0 {
-				v, span, shouldhelpgc = c.nextFree(tinySpanClass)
+				v, span, shouldhelpgc = c.nextFree(tinySpanClass) // 到mcentral中获取空间
 			}
-			x = unsafe.Pointer(v)
-			(*[2]uint64)(x)[0] = 0
-			(*[2]uint64)(x)[1] = 0
+			x = unsafe.Pointer(v)  // 拿到span,函数结尾会返回这个x
+			(*[2]uint64)(x)[0] = 0 // 初始化数据，数据清0,由于微对象大小最大是16KB，所以是2个uint64的大小，这里清空很巧妙
+			(*[2]uint64)(x)[1] = 0 // 初始化数据，数据清0
 			// See if we need to replace the existing tiny block with the new one
 			// based on amount of remaining free space.
 			if !raceenabled && (size < c.tinyoffset || c.tiny == 0) {
 				// Note: disabled when race detector is on, see comment near end of this function.
-				c.tiny = uintptr(x)
-				c.tinyoffset = size
+				c.tiny = uintptr(x) // 设置微对象的基地址
+				c.tinyoffset = size // 设置微对象下一个空闲位置的偏移量
 			}
-			size = maxTinySize
+			size = maxTinySize // 由于是拿个新span，这个在后有其他处理，比如检查数据竞争，debug等会用到
 		} else {
 			hasHeader := !noscan && !heapBitsInSpan(size)
 			if hasHeader {

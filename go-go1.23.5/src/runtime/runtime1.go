@@ -598,21 +598,33 @@ func timediv(v int64, div int32, rem *int32) int32 {
 }
 
 // Helpers for Go. Must be NOSPLIT, must only call NOSPLIT functions, and must not block.
-
+// 注释：线程内，获取M(machine)，并加锁
+// 获取当前Goroutine绑定的M
+// 由于在线程内，所以不需要原子加锁
+// 增加M的locks计数,使该M处于锁定状态，不会被调度释放或给其他G使用
+// 避免G在执行关键代码段时,被Go运行时调度器抢占
+// 适用于运行时需要暂时锁定当前M的场景，例如执行调度器相关代码、垃圾回收、系统调用等。
+//
 //go:nosplit
 func acquirem() *m {
-	gp := getg()
-	gp.m.locks++
+	gp := getg() // 获取当前 Goroutine
+	gp.m.locks++ // 锁计数加1，加锁，不是原子的
 	return gp.m
 }
 
+// 注释：释放M(线程内)
+// 除对 M 的锁定，减少 locks 计数
+// 如果locks==0且当前G需要被抢占(gp.preempt == true),则通过gp.stackguard0=stackPreempt触发调度,
+// 使G在下次函数调用时检查是否需要被切换.
+// 如果 Goroutine 在 acquirem 期间收到了抢占请求，则 releasem 释放锁后，下一次函数调用会触发调度。
+//
 //go:nosplit
 func releasem(mp *m) {
-	gp := getg()
-	mp.locks--
+	gp := getg() // 获取当前 Goroutine
+	mp.locks--   // 释放锁
 	if mp.locks == 0 && gp.preempt {
 		// restore the preemption request in case we've cleared it in newstack
-		gp.stackguard0 = stackPreempt
+		gp.stackguard0 = stackPreempt // 若 preempt 标志已置位，则重新设置 stackguard0，触发调度
 	}
 }
 

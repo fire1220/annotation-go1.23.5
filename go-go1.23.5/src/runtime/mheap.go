@@ -559,11 +559,17 @@ func recordspan(vh unsafe.Pointer, p unsafe.Pointer) {
 // noscan spanClass contains only noscan objects, which do not contain
 // pointers and thus do not need to be scanned by the garbage
 // collector.
+// 跨度类在应用中的下标，跨度类id << 1 表示有指针的跨度类；跨度类id << 1 | 1 表示无指针的跨度类
+// 可以看tinySpanClass值的案例
+// 微对象id=2
+// 微对象有指针的下标是：2 << 1 = 4
+// 微对象无指针的下标是：2 << 1 | 1 = 5
+// 最后一位表示是否包含指针，无指针是1，有指针是0
 type spanClass uint8
 
 const (
 	numSpanClasses = _NumSizeClasses << 1
-	tinySpanClass  = spanClass(tinySizeClass<<1 | 1)
+	tinySpanClass  = spanClass(tinySizeClass<<1 | 1) // 微对象无指针的下标（微对象id是2）
 )
 
 func makeSpanClass(sizeclass uint8, noscan bool) spanClass {
