@@ -1072,7 +1072,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	// to large objects smooth.
 	// 根据要分配的大小，分为微对象、小对象、大对象三类
 	if size <= maxSmallSize-mallocHeaderSize {
-		if noscan && size < maxTinySize { // 微对象(没有指针，并且小于16KB)
+		if noscan && size < maxTinySize { // 注释：微对象分配(没有指针，并且小于16KB)
 			// Tiny allocator.
 			//
 			// Tiny allocator combines several tiny allocation requests
