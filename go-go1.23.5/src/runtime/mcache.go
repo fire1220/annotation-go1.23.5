@@ -126,14 +126,15 @@ func freemcache(c *mcache) {
 //
 // Returns nil if we're not bootstrapping or we don't have a P. The caller's
 // P must not change, so we must be in a non-preemptible state.
+// 注释：获取线程缓存mcache
 func getMCache(mp *m) *mcache {
 	// Grab the mcache, since that's where stats live.
 	pp := mp.p.ptr()
 	var c *mcache
 	if pp == nil {
-		// We will be called without a P while bootstrapping,
-		// in which case we use mcache0, which is set in mallocinit.
-		// mcache0 is cleared when bootstrapping is complete,
+		// We will be called without a P while bootstrapping, 		// 启动时,我们将会被调用,在这期间没有一个P
+		// in which case we use mcache0, which is set in mallocinit.// 在这种情况下,我们使用mcache0,也就是说在mallocinit初始化时设置
+		// mcache0 is cleared when bootstrapping is complete,		// 当启动完成后mcache0将被清除
 		// by procresize.
 		c = mcache0
 	} else {

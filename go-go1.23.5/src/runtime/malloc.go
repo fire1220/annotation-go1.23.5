@@ -978,6 +978,7 @@ func (c *mcache) nextFree(spc spanClass) (v gclinkptr, s *mspan, shouldhelpgc bo
 //
 // Do not remove or change the type signature.
 // See go.dev/issue/67401.
+// 注释：申请内存-内存分配和gc标记
 //
 //go:linkname mallocgc
 func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
@@ -1044,11 +1045,11 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	if mp.gsignal == getg() {
 		throw("malloc during signal")
 	}
-	mp.mallocing = 1
+	mp.mallocing = 1 // 标记开发分配
 
 	shouldhelpgc := false
 	dataSize := userSize
-	c := getMCache(mp)
+	c := getMCache(mp) // 获取mcache线程缓存
 	if c == nil {
 		throw("mallocgc called without a P or outside bootstrapping")
 	}
