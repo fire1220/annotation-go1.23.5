@@ -568,7 +568,7 @@ type m struct {
 	nextp           puintptr
 	oldp            puintptr // the p that was attached before executing a syscall
 	id              int64
-	mallocing       int32 // 分配中表示，当开始分配的时候设置1，分配完成后设置0
+	mallocing       int32 // 分配中表示，当开始分配的时候设置1，分配完成后设置0,防止gc抢占
 	throwing        throwType
 	preemptoff      string // if != "", keep curg running on this m
 	locks           int32

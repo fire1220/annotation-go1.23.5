@@ -37,7 +37,8 @@ type mcache struct {
 	//
 	// tinyAllocs is the number of tiny allocations performed
 	// by the P that owns this mcache.
-	// 注释：微对象处理，微对象（无指针类型的微对象）
+	// 微对象处理，微对象（无指针类型的微对象）
+	// 如果微对象没有可用空间会到alloc中拿
 	tiny       uintptr // 注释：微对象的基地址
 	tinyoffset uintptr // 注释：微对象下一个空闲位置的偏移量
 	tinyAllocs uintptr // 注释：微对象分配的对象个数
@@ -49,6 +50,7 @@ type mcache struct {
 	// 有指针跨度类：numSpanClasses << 1
 	// 无指针跨度类：numSpanClasses << 1 | 1
 	// 例如微对象无指针的跨度类是：5 = 2 << 1 | 1，(微对象id是2)
+	// mcache中的所有mspan的缓存，
 	alloc [numSpanClasses]*mspan // 注释：存储有指针和无指针的跨度类 // spans to allocate from, indexed by spanClass
 
 	stackcache [_NumStackOrders]stackfreelist

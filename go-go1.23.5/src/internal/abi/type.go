@@ -19,7 +19,7 @@ import (
 // Put it in some shared location?)
 type Type struct {
 	Size_       uintptr
-	PtrBytes    uintptr // number of (prefix) bytes in the type that can contain pointers
+	PtrBytes    uintptr // 如果等于0表示该类型无指针 // number of (prefix) bytes in the type that can contain pointers
 	Hash        uint32  // hash of type; avoids computation in hash tables
 	TFlag       TFlag   // extra type information flags
 	Align_      uint8   // alignment of variable with this type
@@ -193,7 +193,7 @@ func (t *Type) HasName() bool {
 }
 
 // Pointers reports whether t contains pointers.
-func (t *Type) Pointers() bool { return t.PtrBytes != 0 }
+func (t *Type) Pointers() bool { return t.PtrBytes != 0 } // 类型是否包含指针
 
 // IfaceIndir reports whether t is stored indirectly in an interface value.
 func (t *Type) IfaceIndir() bool {

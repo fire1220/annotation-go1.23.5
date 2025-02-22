@@ -980,6 +980,7 @@ func (c *mcache) nextFree(spc spanClass) (v gclinkptr, s *mspan, shouldhelpgc bo
 // Do not remove or change the type signature.
 // See go.dev/issue/67401.
 // 注释：申请内存-内存分配和gc清扫
+// typ == nil 表示无类型，一般是count常亮定义出来的
 //
 //go:linkname mallocgc
 func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
@@ -1057,7 +1058,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	var span *mspan
 	var header **_type
 	var x unsafe.Pointer
-	noscan := typ == nil || !typ.Pointers()
+	noscan := typ == nil || !typ.Pointers() // tpy==nil表示无类型，和类型中没有指针
 	// In some cases block zeroing can profitably (for latency reduction purposes)
 	// be delayed till preemption is possible; delayedZeroing tracks that state.
 	delayedZeroing := false
@@ -1071,8 +1072,8 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	// size class has a single object in it already, precisely to make the transition
 	// to large objects smooth.
 	// 根据要分配的大小，分为微对象、小对象、大对象三类
-	if size <= maxSmallSize-mallocHeaderSize {
-		if noscan && size < maxTinySize { // 注释：微对象分配(没有指针，并且小于16KB)
+	if size <= maxSmallSize-mallocHeaderSize { // 微对象和小对象分配
+		if noscan && size < maxTinySize { // 微对象分配(没有指针，并且小于16KB)
 			// Tiny allocator.
 			//
 			// Tiny allocator combines several tiny allocation requests
@@ -1129,7 +1130,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 				c.tinyAllocs++            // 修改分配数
 				mp.mallocing = 0          // 结束分配中标识
 				releasem(mp)
-				return x
+				return x // 微对象缓存中有可以空间就直接返回
 			}
 			// 当前mcache中微对象缓存里没有空间时需要,需要到mcache的alloc里重新拿一个，如果alloc里没有则会到mcentral中拿
 			// Allocate a new maxTinySize block.
@@ -1149,12 +1150,12 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 				c.tinyoffset = size // 设置微对象下一个空闲位置的偏移量
 			}
 			size = maxTinySize // 由于是拿个新span，这个在后有其他处理，比如检查数据竞争，debug等会用到
-		} else {
+		} else { // 小对象分配
 			hasHeader := !noscan && !heapBitsInSpan(size)
 			if hasHeader {
 				size += mallocHeaderSize
 			}
-			var sizeclass uint8
+			var sizeclass uint8 // 要分配的实际内存大小，会向上取整（根据大小向上取整后找到可以容纳该空间的跨度类id）
 			if size <= smallSizeMax-8 {
 				sizeclass = size_to_class8[divRoundUp(size, smallSizeDiv)]
 			} else {
@@ -1177,7 +1178,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 				size -= mallocHeaderSize
 			}
 		}
-	} else {
+	} else { // 大对象分配
 		shouldhelpgc = true
 		// For large allocations, keep track of zeroed state so that
 		// bulk zeroing can be happen later in a preemptible context.
