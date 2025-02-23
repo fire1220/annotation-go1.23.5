@@ -905,9 +905,13 @@ var zerobase uintptr
 
 // nextFreeFast returns the next free object if one is quickly available.
 // Otherwise it returns 0.
+// 注释：在缓存中找下一个可以使用的地址，如果是0表示没有找到
+// 10000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+// 2
+// s.freeindex = 6
 func nextFreeFast(s *mspan) gclinkptr {
-	theBit := sys.TrailingZeros64(s.allocCache) // Is there a free object in the allocCache?
-	if theBit < 64 {
+	theBit := sys.TrailingZeros64(s.allocCache) // 计算尾0个数 // Is there a free object in the allocCache?
+	if theBit < 64 {                            // 如果有64个0表示是空的，allocCache使用的时候才创建，所以至少有1位是使用的
 		result := s.freeindex + uint16(theBit)
 		if result < s.nelems {
 			freeidx := result + 1
@@ -1161,10 +1165,10 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			} else {
 				sizeclass = size_to_class128[divRoundUp(size-smallSizeMax, largeSizeDiv)]
 			}
-			size = uintptr(class_to_size[sizeclass])
-			spc := makeSpanClass(sizeclass, noscan)
-			span = c.alloc[spc]
-			v := nextFreeFast(span)
+			size = uintptr(class_to_size[sizeclass]) // 找到对应跨度类的大小
+			spc := makeSpanClass(sizeclass, noscan)  // 根据大小和是否有指针，构建跨度类的应用id(最后一位是是否有指针的标志位)
+			span = c.alloc[spc]                      // 根据应用跨度类id获取跨度类
+			v := nextFreeFast(span)                  // 根据allocCache快速获取内存空间（allocCache是64位，标记）
 			if v == 0 {
 				v, span, shouldhelpgc = c.nextFree(spc)
 			}

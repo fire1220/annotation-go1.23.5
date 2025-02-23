@@ -50,6 +50,7 @@ func TrailingZeros32(x uint32) int {
 }
 
 // TrailingZeros64 returns the number of trailing zero bits in x; the result is 64 for x == 0.
+// 注释：尾零个数
 func TrailingZeros64(x uint64) int {
 	if x == 0 {
 		return 64
