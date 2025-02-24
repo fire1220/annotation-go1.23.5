@@ -1168,7 +1168,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			span = c.alloc[spc]                      // 根据应用跨度类id获取跨度类
 			v := nextFreeFast(span)                  // 根据allocCache快速获取内存空间（allocCache是64位，标记）
 			if v == 0 {
-				v, span, shouldhelpgc = c.nextFree(spc)
+				v, span, shouldhelpgc = c.nextFree(spc) // 到mcentral中获取
 			}
 			x = unsafe.Pointer(v)
 			if needzero && span.needzero != 0 {
@@ -1184,7 +1184,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 		shouldhelpgc = true
 		// For large allocations, keep track of zeroed state so that
 		// bulk zeroing can be happen later in a preemptible context.
-		span = c.allocLarge(size, noscan)
+		span = c.allocLarge(size, noscan) // 到mheap中获取
 		span.freeindex = 1
 		span.allocCount = 1
 		size = span.elemsize
