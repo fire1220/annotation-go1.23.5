@@ -1061,6 +1061,8 @@ func (s *mspan) refillAllocCache(whichByte uint16) {
 // or after s.freeindex.
 // There are hardware instructions that can be used to make this
 // faster if profiling warrants it.
+// 注释：在mcentral中获取下一个空闲块的下标
+// 优先到缓存里获取，如果没有缓存了，则重新装填缓存
 func (s *mspan) nextFreeIndex() uint16 {
 	sfreeindex := s.freeindex
 	snelems := s.nelems
@@ -1071,10 +1073,10 @@ func (s *mspan) nextFreeIndex() uint16 {
 		throw("s.freeindex > s.nelems")
 	}
 
-	aCache := s.allocCache
+	aCache := s.allocCache // 缓存，二进制位图0已分配1未分配
 
-	bitIndex := sys.TrailingZeros64(aCache)
-	for bitIndex == 64 {
+	bitIndex := sys.TrailingZeros64(aCache) // ctz计算右尾0，用来定位未分配的下标
+	for bitIndex == 64 {                    // 如果等于64说明已经全部被分配了，没有空闲缓存了
 		// Move index to start of next cached bits.
 		sfreeindex = (sfreeindex + 64) &^ (64 - 1)
 		if sfreeindex >= snelems {

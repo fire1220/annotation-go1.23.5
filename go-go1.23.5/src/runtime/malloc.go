@@ -907,6 +907,7 @@ var zerobase uintptr
 // Otherwise it returns 0.
 // 注释：在缓存中找下一个可以使用的地址，如果是0表示没有找到
 // 这里是对mcache的操作
+// 如果缓存里无法提供则返回0
 func nextFreeFast(s *mspan) gclinkptr {
 	theBit := sys.TrailingZeros64(s.allocCache) // (已分配个数)计算右尾0个数,0表示已分配,目的是跳过之前已分配的内存，如果之前没有分配则为0 // Is there a free object in the allocCache?
 	if theBit < 64 {                            // 如果等于64表示全部都已经分配了，没有空闲位置，所以小于64表示有空闲位置
@@ -934,7 +935,7 @@ func nextFreeFast(s *mspan) gclinkptr {
 //
 // Must run in a non-preemptible context since otherwise the owner of
 // c could change.
-// 注释：到mcentral中获取空间(mcentral相关函数)
+// 注释：到mcentral中获取空闲块下标(mcentral相关函数)
 func (c *mcache) nextFree(spc spanClass) (v gclinkptr, s *mspan, shouldhelpgc bool) {
 	s = c.alloc[spc] // 获取对应的span
 	shouldhelpgc = false
@@ -1137,7 +1138,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			// 当前mcache中微对象缓存里没有空间时需要,需要到mcache的alloc里重新拿一个，如果alloc里没有则会到mcentral中拿
 			// Allocate a new maxTinySize block.
 			span = c.alloc[tinySpanClass] // 获取微对象无指针的跨度类
-			v := nextFreeFast(span)       // 到mcache里获取空间
+			v := nextFreeFast(span)       // 快速到mcache里获取下一个空闲块的下标
 			if v == 0 {
 				v, span, shouldhelpgc = c.nextFree(tinySpanClass) // 到mcentral中获取空间
 			}
