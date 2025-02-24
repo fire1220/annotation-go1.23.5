@@ -907,18 +907,18 @@ var zerobase uintptr
 // Otherwise it returns 0.
 // 注释：在缓存中找下一个可以使用的地址，如果是0表示没有找到
 func nextFreeFast(s *mspan) gclinkptr {
-	theBit := sys.TrailingZeros64(s.allocCache) // 计算尾0个数 // Is there a free object in the allocCache?
-	if theBit < 64 {                            // 如果有64个0表示是空的，allocCache使用的时候才创建，所以至少有1位是使用的
-		result := s.freeindex + uint16(theBit) // 用右尾0的个数计算和空位下标计算这次要返回的地址下标
-		if result < s.nelems {
-			freeidx := result + 1
+	theBit := sys.TrailingZeros64(s.allocCache) // (已分配个数)计算右尾0个数,0表示已分配,目的是跳过之前已分配的内存，如果之前没有分配则为0 // Is there a free object in the allocCache?
+	if theBit < 64 {                            // 如果等于64表示全部都已经分配了，没有空闲位置，所以小于64表示有空闲位置
+		result := s.freeindex + uint16(theBit) // 计算可用位置，（跳过已经分配的位置下标）
+		if result < s.nelems {                 // 可用位置必须小于该跨度类可容纳的总元素数
+			freeidx := result + 1 // 确定下一个空闲位置
 			if freeidx%64 == 0 && freeidx != s.nelems {
-				return 0
+				return 0 // 缓存大小是64个位置，只能容纳64个，这里表示缓存已经满，并且还没有达到跨度类总容量，则无法确定下一个要提供缓存的位置，所以就不反回内存地址了
 			}
-			s.allocCache >>= uint(theBit + 1)                       // 怎么感觉这个操作是把allocCache里剩余的（右尾0）全部设置成1了,不明白，理论上讲allocCache每一位代表一个对象，这下把所有对象都拿了出来
-			s.freeindex = freeidx                                   // 感觉这个操作是把索引设置成allocCache的全部值的位置。就是清空了allocCache的位置
+			s.allocCache >>= uint(theBit + 1)                       // 重置分配位图，（之前已分配数 + 本次分配数）
+			s.freeindex = freeidx                                   // 重置空闲下标(矫正空闲位置偏移量)（旧索引数+之前已分配数+本次分配数）
 			s.allocCount++                                          // 分配数加一
-			return gclinkptr(uintptr(result)*s.elemsize + s.base()) // 返回这次分配的地址
+			return gclinkptr(uintptr(result)*s.elemsize + s.base()) // 返回这次分配的空闲指针地址（第几块*对象大小+基地址）
 		}
 	}
 	return 0

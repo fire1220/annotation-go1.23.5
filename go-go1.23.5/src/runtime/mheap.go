@@ -428,7 +428,7 @@ type mspan struct {
 	freeindex uint16 // 空闲对象块的下标位置（下标范围是[0 - nelems]之间(包含nelems)）空闲内存地址是 s.freeindex * s.elemsize + s.base()
 	// TODO: Look up nelems from sizeclass and remove this field if it
 	// helps performance.
-	nelems uint16 // 每个跨度类id对应存储的元素数，固定的配置 // number of object in the span.
+	nelems uint16 // 每个span中id对应的元素总数量，(span中可容纳的总对象块数量)，即有多少个块可供分配（对应class表【objects】字段） (位置：sizeclasses.go) // number of object in the span.
 	// freeIndexForScan is like freeindex, except that freeindex is
 	// used by the allocator whereas freeIndexForScan is used by the
 	// GC scanner. They are two fields so that the GC sees the object
@@ -446,9 +446,8 @@ type mspan struct {
 	// 译：freeindex中allocBits的缓存。allocCache被移位，使得最低位对应于自由索引位。
 	// 	  allocCache保存allocBits的补码，因此允许ctz(计数尾随零)直接使用它。allocCache可能包含s.nelems以外的位；呼叫者必须忽略这些。
 	//
-	// 注释：allocCache 中的每一位对应一个对象，表示该对象是已分配（1）还是空闲（0）
-	// 初始化s.allocCache = ^uint64(0)表示所有对象初始时都已分配，这样做的目的是在初始化时，不允许任何对象被分配，直到实际的空闲位被标记出来
-	allocCache uint64 // 缓存控制：0表示空闲，1表示使用
+	// 初始化s.allocCache = ^uint64(0)表示所有对象初始时都是空闲的
+	allocCache uint64 // // (当前span的快速缓存)位图0已分配1空闲(默认1)(每一位控制一个span的1块(elem)，最大控制64块，每种sapn的块数量固定【elem称作objects】位置：sizeclasses.go)。
 
 	// allocBits and gcmarkBits hold pointers to a span's mark and
 	// allocation bits. The pointers are 8 byte aligned.
