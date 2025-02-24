@@ -912,14 +912,14 @@ var zerobase uintptr
 func nextFreeFast(s *mspan) gclinkptr {
 	theBit := sys.TrailingZeros64(s.allocCache) // 计算尾0个数 // Is there a free object in the allocCache?
 	if theBit < 64 {                            // 如果有64个0表示是空的，allocCache使用的时候才创建，所以至少有1位是使用的
-		result := s.freeindex + uint16(theBit)
+		result := s.freeindex + uint16(theBit) // 用右尾0的个数计算和空位下标计算这次要返回的地址下标
 		if result < s.nelems {
 			freeidx := result + 1
 			if freeidx%64 == 0 && freeidx != s.nelems {
 				return 0
 			}
-			s.allocCache >>= uint(theBit + 1)
-			s.freeindex = freeidx
+			s.allocCache >>= uint(theBit + 1) // 怎么感觉这个操作是把allocCache里剩余的（右尾0）全部设置成1了,不明白，理论上讲allocCache每一位代表一个对象，这下把所有对象都拿了出来
+			s.freeindex = freeidx             // 感觉这个操作是把索引设置成allocCache的全部值的位置。就是清空了allocCache的位置
 			s.allocCount++
 			return gclinkptr(uintptr(result)*s.elemsize + s.base())
 		}
