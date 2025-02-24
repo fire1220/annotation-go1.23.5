@@ -906,9 +906,6 @@ var zerobase uintptr
 // nextFreeFast returns the next free object if one is quickly available.
 // Otherwise it returns 0.
 // 注释：在缓存中找下一个可以使用的地址，如果是0表示没有找到
-// 10000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-// 2
-// s.freeindex = 6
 func nextFreeFast(s *mspan) gclinkptr {
 	theBit := sys.TrailingZeros64(s.allocCache) // 计算尾0个数 // Is there a free object in the allocCache?
 	if theBit < 64 {                            // 如果有64个0表示是空的，allocCache使用的时候才创建，所以至少有1位是使用的
@@ -918,10 +915,10 @@ func nextFreeFast(s *mspan) gclinkptr {
 			if freeidx%64 == 0 && freeidx != s.nelems {
 				return 0
 			}
-			s.allocCache >>= uint(theBit + 1) // 怎么感觉这个操作是把allocCache里剩余的（右尾0）全部设置成1了,不明白，理论上讲allocCache每一位代表一个对象，这下把所有对象都拿了出来
-			s.freeindex = freeidx             // 感觉这个操作是把索引设置成allocCache的全部值的位置。就是清空了allocCache的位置
-			s.allocCount++
-			return gclinkptr(uintptr(result)*s.elemsize + s.base())
+			s.allocCache >>= uint(theBit + 1)                       // 怎么感觉这个操作是把allocCache里剩余的（右尾0）全部设置成1了,不明白，理论上讲allocCache每一位代表一个对象，这下把所有对象都拿了出来
+			s.freeindex = freeidx                                   // 感觉这个操作是把索引设置成allocCache的全部值的位置。就是清空了allocCache的位置
+			s.allocCount++                                          // 分配数加一
+			return gclinkptr(uintptr(result)*s.elemsize + s.base()) // 返回这次分配的地址
 		}
 	}
 	return 0
