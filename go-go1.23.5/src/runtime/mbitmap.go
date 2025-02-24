@@ -1077,11 +1077,13 @@ func (s *mspan) nextFreeIndex() uint16 {
 
 	bitIndex := sys.TrailingZeros64(aCache) // ctz计算右尾0，用来定位未分配的下标
 	for bitIndex == 64 {                    // 如果等于64说明已经全部被分配了，没有空闲缓存了
-		// Move index to start of next cached bits.
-		sfreeindex = (sfreeindex + 64) &^ (64 - 1)
-		if sfreeindex >= snelems {
-			s.freeindex = snelems
-			return snelems
+		// Move index to start of next cached bits. // 将索引移动到下一个缓存位的开头。
+		// (sfreeindex + 64)表示下标移动到64位置也就是全部缓存已分配的位置。
+		//  &^ (64 - 1) 表示把后6为清空，可以理解为强行进位，单位是64.这样做的目的是方便后面充新装填缓存后重新计算下标时使用
+		sfreeindex = (sfreeindex + 64) &^ (64 - 1) // 定位下一个空闲块下标(低6位清0),得到的值是64的倍数
+		if sfreeindex >= snelems {                 // 如果大于span总块数，则无力分配，直接返回满值，告诉调用者当前msap已经分配完成了，并设置下标为满值
+			s.freeindex = snelems // 下标设置为满值
+			return snelems        // 表示全部已经分配，需要到mheap中重新装填数据
 		}
 		whichByte := sfreeindex / 8
 		// Refill s.allocCache with the next 64 alloc bits.
