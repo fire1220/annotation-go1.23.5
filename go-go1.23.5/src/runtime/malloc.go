@@ -906,6 +906,7 @@ var zerobase uintptr
 // nextFreeFast returns the next free object if one is quickly available.
 // Otherwise it returns 0.
 // 注释：在缓存中找下一个可以使用的地址，如果是0表示没有找到
+// 这里是对mcache的操作
 func nextFreeFast(s *mspan) gclinkptr {
 	theBit := sys.TrailingZeros64(s.allocCache) // (已分配个数)计算右尾0个数,0表示已分配,目的是跳过之前已分配的内存，如果之前没有分配则为0 // Is there a free object in the allocCache?
 	if theBit < 64 {                            // 如果等于64表示全部都已经分配了，没有空闲位置，所以小于64表示有空闲位置
