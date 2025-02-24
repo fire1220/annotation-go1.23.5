@@ -1074,7 +1074,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	// size class has a single object in it already, precisely to make the transition
 	// to large objects smooth.
 	// 根据要分配的大小，分为微对象、小对象、大对象三类
-	if size <= maxSmallSize-mallocHeaderSize { // 微对象和小对象分配
+	if size <= maxSmallSize-mallocHeaderSize { // 微对象或小对象分配(小于32KB)
 		if noscan && size < maxTinySize { // 微对象分配(没有指针，并且小于16KB)
 			// Tiny allocator.
 			//
