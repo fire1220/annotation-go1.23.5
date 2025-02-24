@@ -425,7 +425,7 @@ type mspan struct {
 	// undefined and should never be referenced.
 	//
 	// Object n starts at address n*elemsize + (start << pageShift).
-	freeindex uint16
+	freeindex uint16 // 空闲对象块的下标位置（下标范围是[0 - nelems]之间(包含nelems)）空闲内存地址是 s.freeindex * s.elemsize + s.base()
 	// TODO: Look up nelems from sizeclass and remove this field if it
 	// helps performance.
 	nelems uint16 // 每个跨度类id对应存储的元素数，固定的配置 // number of object in the span.
