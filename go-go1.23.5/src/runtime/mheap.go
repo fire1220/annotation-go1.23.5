@@ -404,9 +404,9 @@ type mspan struct {
 	prev *mspan     // 链表下一个 // previous span in list, or nil if none
 	list *mSpanList // For debugging.
 
-	// 对应page叶的基地址,和page叶数量
+	// 对应page页的基地址,和page页数量(一个span会管理多个数据页,这里可以表示管理的所有页)
 	startAddr uintptr // page基地址 // address of first byte of span aka s.base()
-	npages    uintptr // page叶数量 // number of pages in span
+	npages    uintptr // page页数量 // number of pages in span
 
 	manualFreeList gclinkptr // list of free objects in mSpanManual spans
 
@@ -428,7 +428,7 @@ type mspan struct {
 	freeindex uint16 // 空闲对象块的下标位置（下标范围是[0 - nelems]之间(包含nelems)）空闲内存地址是 s.freeindex * s.elemsize + s.base()
 	// TODO: Look up nelems from sizeclass and remove this field if it
 	// helps performance.
-	nelems uint16 // 每个span中id对应的元素总数量，(span中可容纳的总对象块数量)，即有多少个块可供分配（对应class表【objects】字段） (位置：sizeclasses.go) // number of object in the span.
+	nelems uint16 // (块总数)每个span中id对应的元素总数量，(span中可容纳的总对象块数量)，即有多少个块可供分配（对应class表【objects】字段） (位置：sizeclasses.go) // number of object in the span.
 	// freeIndexForScan is like freeindex, except that freeindex is
 	// used by the allocator whereas freeIndexForScan is used by the
 	// GC scanner. They are two fields so that the GC sees the object
@@ -485,14 +485,14 @@ type mspan struct {
 
 	sweepgen              uint32
 	divMul                uint32        // for divide by elemsize
-	allocCount            uint16        // number of allocated objects
-	spanclass             spanClass     // size class and noscan (uint8)
+	allocCount            uint16        // 已分配的数量 // number of allocated objects
+	spanclass             spanClass     // 跨度类运行时的id(最后一位表示是否包含指针，其余位表示跨度类id) // size class and noscan (uint8)
 	state                 mSpanStateBox // mSpanInUse etc; accessed atomically (get/set methods)
 	needzero              uint8         // needs to be zeroed before allocation
 	isUserArenaChunk      bool          // whether or not this span represents a user arena
 	allocCountBeforeCache uint16        // a copy of allocCount that is stored just before this span is cached
-	elemsize              uintptr       // computed from sizeclass or from npages
-	limit                 uintptr       // end of data in span
+	elemsize              uintptr       // 没块占用内存大小 // computed from sizeclass or from npages
+	limit                 uintptr       // span内存结尾地址 // end of data in span
 	speciallock           mutex         // guards specials list and changes to pinnerBits
 	specials              *special      // linked list of special records sorted by offset.
 	userArenaChunkFree    addrRange     // interval for managing chunk allocation
@@ -568,7 +568,7 @@ func recordspan(vh unsafe.Pointer, p unsafe.Pointer) {
 // 微对象id=2
 // 微对象有指针的下标是：2 << 1 = 4
 // 微对象无指针的下标是：2 << 1 | 1 = 5
-// 最后一位表示是否包含指针，无指针是1，有指针是0
+// 最后一位表示是否包含指针，无指针是1，有指针是0,其余位表示跨度类id
 type spanClass uint8
 
 const (

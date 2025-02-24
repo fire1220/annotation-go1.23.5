@@ -936,28 +936,28 @@ func nextFreeFast(s *mspan) gclinkptr {
 // c could change.
 // 注释：到mcentral中获取空间(mcentral相关函数)
 func (c *mcache) nextFree(spc spanClass) (v gclinkptr, s *mspan, shouldhelpgc bool) {
-	s = c.alloc[spc]
+	s = c.alloc[spc] // 获取对应的span
 	shouldhelpgc = false
-	freeIndex := s.nextFreeIndex()
-	if freeIndex == s.nelems {
+	freeIndex := s.nextFreeIndex() // 找下一个空闲位置的下标
+	if freeIndex == s.nelems {     // 全部都已经分配(下个空闲下标=span总元素数)
 		// The span is full.
 		if s.allocCount != s.nelems {
 			println("runtime: s.allocCount=", s.allocCount, "s.nelems=", s.nelems)
 			throw("s.allocCount != s.nelems && freeIndex == s.nelems")
 		}
-		c.refill(spc)
+		c.refill(spc) // 重新装填span，到mheap中获取span并装填到mcentral中
 		shouldhelpgc = true
 		s = c.alloc[spc]
 
-		freeIndex = s.nextFreeIndex()
+		freeIndex = s.nextFreeIndex() // 装填完成后再获取一下可用元素的下标
 	}
 
 	if freeIndex >= s.nelems {
 		throw("freeIndex is not valid")
 	}
 
-	v = gclinkptr(uintptr(freeIndex)*s.elemsize + s.base())
-	s.allocCount++
+	v = gclinkptr(uintptr(freeIndex)*s.elemsize + s.base()) // 返回内存地址，（元素下标*元素大小+基地址）
+	s.allocCount++                                          // 分配数加一
 	if s.allocCount > s.nelems {
 		println("s.allocCount=", s.allocCount, "s.nelems=", s.nelems)
 		throw("s.allocCount > s.nelems")
