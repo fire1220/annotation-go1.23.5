@@ -486,6 +486,7 @@ type mspan struct {
 	// 会把其中64位补码放到缓存allocCache里方便ctz右尾零计算,所以allocCache里0表示已分配
 	// 连续数组空间首指针(对应的是一个uint8数组的首指针)(在申请时是个大的连续空间里截取出一段连续的gcBits空间)每8个字节一组，8字节对齐的位图
 	// gcBits实际上是uint8类型，其中中每一位控制一个当前span的1块，，每种span的块数量固定【objects】位置：src/runtime/sizeclasses.go
+	// 0未分配1已分配，0和1并不是连续的,当装填到缓存allocCache中后会计算分配清空，如果全部分配，则会再次装填一次，直到有可用块，或无可用块
 	allocBits  *gcBits // 块位图基地址,值是位图的前8位。当前span的所有块（每一位代表1块）
 	gcmarkBits *gcBits
 	pinnerBits *gcBits // bitmap for pinned objects; accessed atomically
