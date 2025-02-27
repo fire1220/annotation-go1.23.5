@@ -1045,11 +1045,13 @@ func (s *mspan) allocBitsForIndex(allocBitIndex uintptr) markBits {
 // s.allocCache.
 // 译：relfillAllocCache占用8个字节。allocBits从whichByte开始并取反，以便可以使用ctz（计数尾随零）指令。然后，它将这8个字节放入缓存的64位s.allocCache中
 //
-// 注释：接着从allocBits中拿出64个位作为快速缓存块
+// 注释：重新装填allocCache缓存
+// 接着从allocBits中拿出64个位作为快速缓存块
 // whichByte前面的已经别分配了，所以需要偏移whichByte位继续拿出64位放到快速缓存里
 // (重新缓存64个空的块到快速缓冲区里)把空闲位置对应的页缓存到mspan.allocCache快速缓存中
 // 重新缓存64个空的块到快速缓冲区
 func (s *mspan) refillAllocCache(whichByte uint16) {
+	// 从数组指针中，偏移whichByte(是8的倍数)个的位置指针向后拿出8个元素(共64位)，把span位图中对应的页地址取出来（一个span存储多个页，每个页是8KB（字节）），这里把空闲位置对应页地址取出来
 	bytes := (*[8]uint8)(unsafe.Pointer(s.allocBits.bytep(uintptr(whichByte))))
 	aCache := uint64(0)                   // 初始化64位位图
 	aCache |= uint64(bytes[0])            // 第1个8位的位图
@@ -1062,6 +1064,7 @@ func (s *mspan) refillAllocCache(whichByte uint16) {
 	aCache |= uint64(bytes[7]) << (7 * 8) // 第8个8位的位图
 	// bytes  值： bytes[0] bytes[1] bytes[2] bytes[3] bytes[4] bytes[5] bytes[6] bytes[7]，每个是8位共64位
 	// aCache 值： bytes[7] bytes[6] bytes[5] bytes[4] bytes[3] bytes[2] bytes[1] bytes[0]，每个是8位共64位
+	// uint8内的位置不变，已8个一组，整租颠倒位置
 	// 下面是把aCache取反后放到快速缓存
 	s.allocCache = ^aCache // 一共缓存64位，为了方便ctz所以缓存allocBits的补码
 }

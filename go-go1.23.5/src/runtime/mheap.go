@@ -484,7 +484,7 @@ type mspan struct {
 	// 会把其中64位补码放到缓存allocCache里方便ctz右尾零计算,所以allocCache里0表示已分配
 	// 连续数组空间首指针(对应的是一个uint8数组的首指针)(在申请时是个大的连续空间里截取出一段连续的gcBits空间)每8个字节一组，8字节对齐的位图
 	// gcBits实际上是uint8类型，其中中每一位控制一个当前span的1块，，每种span的块数量固定【objects】位置：src/runtime/sizeclasses.go
-	allocBits  *gcBits // 块位图。当前span的所有块（每一位代表1块）
+	allocBits  *gcBits // 块位图基地址,值是位图的前8位。当前span的所有块（每一位代表1块）
 	gcmarkBits *gcBits
 	pinnerBits *gcBits // bitmap for pinned objects; accessed atomically
 
@@ -2364,10 +2364,12 @@ func freeSpecial(s *special, p unsafe.Pointer, size uintptr) {
 	}
 }
 
+// 注释：位图前8位,存储该位置的地址，是位图的基地址
+// 不记录位图总大小和长度，只记录首8位的位图
 // gcBits is an alloc/mark bitmap. This is always used as gcBits.x.
 type gcBits struct {
 	_ sys.NotInHeap
-	x uint8
+	x uint8 // 位图前8位
 }
 
 // bytep returns a pointer to the n'th byte of b.
