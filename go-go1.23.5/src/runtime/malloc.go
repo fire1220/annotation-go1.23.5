@@ -936,6 +936,7 @@ func nextFreeFast(s *mspan) gclinkptr {
 // Must run in a non-preemptible context since otherwise the owner of
 // c could change.
 // 注释：到mcentral中获取空闲块下标(mcentral相关函数)
+// 到mcentral的span中获取可用块下标，如果没有则会到mheap中获取一个新的span到mcentral中后，再次到mcentral的span中获取
 func (c *mcache) nextFree(spc spanClass) (v gclinkptr, s *mspan, shouldhelpgc bool) {
 	s = c.alloc[spc] // 获取对应的span
 	shouldhelpgc = false

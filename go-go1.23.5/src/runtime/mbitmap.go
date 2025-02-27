@@ -1117,14 +1117,16 @@ func (s *mspan) nextFreeIndex() uint16 {
 	s.allocCache >>= uint(bitIndex + 1) // 移除已分配的位，(bitIndex表示之前分配的，1表示当前分配1个)
 	sfreeindex = result + 1             // 计算下一个空块下标(这次拿走一个块)
 
-	if sfreeindex%64 == 0 && sfreeindex != snelems {
+	// sfreeindex 表示下次要分配的空闲块下标（下标从0开始），是从s.allocCache中拿出后加1
+	// 如果sfreeindex%64 == 0 表示当前s.allocCache已经用完，因为sfreeindex下标是从0开始的。
+	if sfreeindex%64 == 0 && sfreeindex != snelems { // 当前缓存已经用完 并且 下个可用块没有到达span的总块数，则会重新装填缓存，共下次使用
 		// We just incremented s.freeindex so it isn't 0.
 		// As each 1 in s.allocCache was encountered and used for allocation
 		// it was shifted away. At this point s.allocCache contains all 0s.
 		// Refill s.allocCache so that it corresponds
 		// to the bits at s.allocBits starting at s.freeindex.
-		whichByte := sfreeindex / 8
-		s.refillAllocCache(whichByte)
+		whichByte := sfreeindex / 8   // 保证8的整数倍，因为span.allocBits是8位一组
+		s.refillAllocCache(whichByte) // 重新装填缓存
 	}
 	s.freeindex = sfreeindex // 设置下一个空闲块下标
 	return result            // 返回当前空闲块下标
