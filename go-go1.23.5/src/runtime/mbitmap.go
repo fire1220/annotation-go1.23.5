@@ -1050,6 +1050,7 @@ func (s *mspan) allocBitsForIndex(allocBitIndex uintptr) markBits {
 // whichByte前面的已经别分配了，所以需要偏移whichByte位继续拿出64位放到快速缓存里
 // (重新缓存64个空的块到快速缓冲区里)把空闲位置对应的页缓存到mspan.allocCache快速缓存中
 // 重新缓存64个空的块到快速缓冲区
+// 这里不保证返回的是否是空闲，可能返回的全部都是已分配的。外层会有for循环判断是否全部分配，如果获取的是全部都已分配的时，会继续下一轮尝试，直到有可用块，或者无空用块
 func (s *mspan) refillAllocCache(whichByte uint16) {
 	// 从数组指针中，偏移whichByte(是8的倍数)个的位置指针向后拿出8个元素(共64位)，把span位图中对应的页地址取出来（一个span存储多个页，每个页是8KB（字节）），这里把空闲位置对应页地址取出来
 	bytes := (*[8]uint8)(unsafe.Pointer(s.allocBits.bytep(uintptr(whichByte)))) // (返回数组：8个一组的数组指针)bytes = allocBites基地址 + whichByte
@@ -1078,16 +1079,16 @@ func (s *mspan) refillAllocCache(whichByte uint16) {
 // 注释：在mcentral中获取下一个空闲块的下标
 // 优先到缓存里获取，如果没有缓存了，则重新装填缓存
 func (s *mspan) nextFreeIndex() uint16 {
-	sfreeindex := s.freeindex
-	snelems := s.nelems
+	sfreeindex := s.freeindex // 当前可用块下标
+	snelems := s.nelems       // 当前span总块数
 	if sfreeindex == snelems {
-		return sfreeindex
+		return sfreeindex // 该值表示无可用块（无可用内存）
 	}
 	if sfreeindex > snelems {
 		throw("s.freeindex > s.nelems")
 	}
 
-	aCache := s.allocCache // 缓存，二进制位图0已分配1未分配
+	aCache := s.allocCache // 缓存，二进制位图0已分配1未分配,每一个表示一个块
 
 	bitIndex := sys.TrailingZeros64(aCache) // ctz计算右尾0，用来定位未分配的下标
 	for bitIndex == 64 {                    // 如果等于64说明已经全部被分配了，没有空闲缓存了
@@ -1099,9 +1100,9 @@ func (s *mspan) nextFreeIndex() uint16 {
 			s.freeindex = snelems // 下标设置为满值
 			return snelems        // 表示全部已经分配，需要到mheap中重新装填数据
 		}
-		whichByte := sfreeindex / 8
+		whichByte := sfreeindex / 8 // 保证8的整数倍，因为span.allocBits是8位一组
 		// Refill s.allocCache with the next 64 alloc bits.
-		s.refillAllocCache(whichByte)          // 重新装填64位缓存
+		s.refillAllocCache(whichByte)          // 重新装填64位缓存,在span.allocBits中跳过whichByte个组(每组8位)后，再装填64位到s.allocCache缓存中
 		aCache = s.allocCache                  // 拿出缓存内容
 		bitIndex = sys.TrailingZeros64(aCache) // 获取已分配的块的个数（计算ctz右尾零个数(0表示已占用))
 		// nothing available in cached bits
@@ -1110,11 +1111,11 @@ func (s *mspan) nextFreeIndex() uint16 {
 	result := sfreeindex + uint16(bitIndex) // 当前空闲位下标 + 已分配块个数 = 当前要分配的空闲块下标
 	if result >= snelems {                  // 如果空闲块下标 >= span的总块数，则把下一个空闲块下标设置成总块个数，并返回总块个数
 		s.freeindex = snelems // 这里表示下一个空闲快已经超出,因为下标是从0开始，最大有效数是snelems-1
-		return snelems
+		return snelems        // 该值表示无可用块（无可用内存）
 	}
 
 	s.allocCache >>= uint(bitIndex + 1) // 移除已分配的位，(bitIndex表示之前分配的，1表示当前分配1个)
-	sfreeindex = result + 1
+	sfreeindex = result + 1             // 计算下一个空块下标(这次拿走一个块)
 
 	if sfreeindex%64 == 0 && sfreeindex != snelems {
 		// We just incremented s.freeindex so it isn't 0.
@@ -1125,8 +1126,8 @@ func (s *mspan) nextFreeIndex() uint16 {
 		whichByte := sfreeindex / 8
 		s.refillAllocCache(whichByte)
 	}
-	s.freeindex = sfreeindex
-	return result
+	s.freeindex = sfreeindex // 设置下一个空闲块下标
+	return result            // 返回当前空闲块下标
 }
 
 // isFree reports whether the index'th object in s is unallocated.
