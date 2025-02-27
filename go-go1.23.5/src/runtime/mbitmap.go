@@ -1043,18 +1043,27 @@ func (s *mspan) allocBitsForIndex(allocBitIndex uintptr) markBits {
 // and negates them so that ctz (count trailing zeros) instructions
 // can be used. It then places these 8 bytes into the cached 64 bit
 // s.allocCache.
+// 译：relfillAllocCache占用8个字节。allocBits从whichByte开始并取反，以便可以使用ctz（计数尾随零）指令。然后，它将这8个字节放入缓存的64位s.allocCache中
+//
+// 注释：接着从allocBits中拿出64个位作为快速缓存块
+// whichByte前面的已经别分配了，所以需要偏移whichByte位继续拿出64位放到快速缓存里
+// (重新缓存64个空的块到快速缓冲区里)把空闲位置对应的页缓存到mspan.allocCache快速缓存中
+// 重新缓存64个空的块到快速缓冲区
 func (s *mspan) refillAllocCache(whichByte uint16) {
 	bytes := (*[8]uint8)(unsafe.Pointer(s.allocBits.bytep(uintptr(whichByte))))
-	aCache := uint64(0)
-	aCache |= uint64(bytes[0])
-	aCache |= uint64(bytes[1]) << (1 * 8)
+	aCache := uint64(0)                   // 初始化64位位图
+	aCache |= uint64(bytes[0])            // 第1个8位的位图
+	aCache |= uint64(bytes[1]) << (1 * 8) // 第2个8位的位图
 	aCache |= uint64(bytes[2]) << (2 * 8)
 	aCache |= uint64(bytes[3]) << (3 * 8)
 	aCache |= uint64(bytes[4]) << (4 * 8)
 	aCache |= uint64(bytes[5]) << (5 * 8)
-	aCache |= uint64(bytes[6]) << (6 * 8)
-	aCache |= uint64(bytes[7]) << (7 * 8)
-	s.allocCache = ^aCache
+	aCache |= uint64(bytes[6]) << (6 * 8) // 第7个8位的位图
+	aCache |= uint64(bytes[7]) << (7 * 8) // 第8个8位的位图
+	// bytes  值： bytes[0] bytes[1] bytes[2] bytes[3] bytes[4] bytes[5] bytes[6] bytes[7]，每个是8位共64位
+	// aCache 值： bytes[7] bytes[6] bytes[5] bytes[4] bytes[3] bytes[2] bytes[1] bytes[0]，每个是8位共64位
+	// 下面是把aCache取反后放到快速缓存
+	s.allocCache = ^aCache // 一共缓存64位，为了方便ctz所以缓存allocBits的补码
 }
 
 // nextFreeIndex returns the index of the next free object in s at
@@ -1099,7 +1108,7 @@ func (s *mspan) nextFreeIndex() uint16 {
 		return snelems
 	}
 
-	s.allocCache >>= uint(bitIndex + 1)
+	s.allocCache >>= uint(bitIndex + 1) // 移除已分配的位，(bitIndex表示之前分配的，1表示当前分配1个)
 	sfreeindex = result + 1
 
 	if sfreeindex%64 == 0 && sfreeindex != snelems {

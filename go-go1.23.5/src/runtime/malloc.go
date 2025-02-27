@@ -939,7 +939,7 @@ func nextFreeFast(s *mspan) gclinkptr {
 func (c *mcache) nextFree(spc spanClass) (v gclinkptr, s *mspan, shouldhelpgc bool) {
 	s = c.alloc[spc] // 获取对应的span
 	shouldhelpgc = false
-	freeIndex := s.nextFreeIndex() // 找下一个空闲位置的下标
+	freeIndex := s.nextFreeIndex() // 找下一个空闲块位置的下标
 	if freeIndex == s.nelems {     // 全部都已经分配(下个空闲下标=span总元素数)
 		// The span is full.
 		if s.allocCount != s.nelems {

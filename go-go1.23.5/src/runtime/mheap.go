@@ -447,7 +447,7 @@ type mspan struct {
 	// 	  allocCache保存allocBits的补码，因此允许ctz(计数尾随零)直接使用它。allocCache可能包含s.nelems以外的位；呼叫者必须忽略这些。
 	//
 	// 初始化s.allocCache = ^uint64(0)表示所有对象初始时都是空闲的
-	allocCache uint64 // // (当前span的快速缓存)位图0已分配1空闲(默认1)(每一位控制一个span的1块(elem)，最大控制64块，每种sapn的块数量固定【elem称作objects】位置：sizeclasses.go)。
+	allocCache uint64 // (当前span的快速缓存)位图0已分配1空闲(默认1)(每一位控制一个span的1块(elem)，最大控制64块，每种sapn的块数量固定【elem称作objects】位置：sizeclasses.go)。
 
 	// allocBits and gcmarkBits hold pointers to a span's mark and
 	// allocation bits. The pointers are 8 byte aligned.
@@ -471,7 +471,20 @@ type mspan struct {
 	// The sweep will free the old allocBits and set allocBits to the
 	// gcmarkBits. The gcmarkBits are replaced with a fresh zeroed
 	// out memory.
-	allocBits  *gcBits
+	// 译：allocBits和gcmarkBits保存指向span's的标记和分配位的指针。指针是8字节对齐的。有三个领域可以保存这些数据。
+	// 		free：肮脏的arenas不再被访问，可以重复使用。
+	//		next：保存要在下一个GC周期中使用的信息。
+	//		current：此GC周期中使用的信息。
+	//		previous：在上一个GC周期中使用的信息。
+	// 		一个新的GC循环从调用finishsweep_m开始。finishsweep_m将上一个arena移到free arena，将当前arena移到上一个，将下一个arena移动到当前arena。
+	//		当跨度请求内存为下一个GC周期保存gcmarkBits以及为新分配的跨度保存allocBits时，会填充下一个arena。
+	// 		指针运算是“手动”完成的，而不是使用数组来避免沿关键性能路径进行边界检查。扫描将释放旧的allocBits，并将allocBit设置为gcmarkBits。gcmarkBits将替换为新的清零内存。
+	//
+	// 标记内存占用情况,8字节对齐的位图0未分配1已分配
+	// 会把其中64位补码放到缓存allocCache里方便ctz右尾零计算,所以allocCache里0表示已分配
+	// 连续数组空间首指针(对应的是一个uint8数组的首指针)(在申请时是个大的连续空间里截取出一段连续的gcBits空间)每8个字节一组，8字节对齐的位图
+	// gcBits实际上是uint8类型，其中中每一位控制一个当前span的1块，，每种span的块数量固定【objects】位置：src/runtime/sizeclasses.go
+	allocBits  *gcBits // 块位图。当前span的所有块（每一位代表1块）
 	gcmarkBits *gcBits
 	pinnerBits *gcBits // bitmap for pinned objects; accessed atomically
 
@@ -491,7 +504,7 @@ type mspan struct {
 	needzero              uint8         // needs to be zeroed before allocation
 	isUserArenaChunk      bool          // whether or not this span represents a user arena
 	allocCountBeforeCache uint16        // a copy of allocCount that is stored just before this span is cached
-	elemsize              uintptr       // 没块占用内存大小 // computed from sizeclass or from npages
+	elemsize              uintptr       // 每块占用内存大小 // computed from sizeclass or from npages
 	limit                 uintptr       // span内存结尾地址 // end of data in span
 	speciallock           mutex         // guards specials list and changes to pinnerBits
 	specials              *special      // linked list of special records sorted by offset.
