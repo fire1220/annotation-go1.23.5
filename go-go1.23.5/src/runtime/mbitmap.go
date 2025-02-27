@@ -98,7 +98,7 @@ const (
 	// would not be invariant to size-class rounding. Eschewing this property means a
 	// more complex check or possibly storing additional state to determine whether a
 	// span has malloc headers.
-	minSizeForMallocHeader = goarch.PtrSize * ptrBits
+	minSizeForMallocHeader = goarch.PtrSize * ptrBits // 如果一个指针占8字节，该值是8*64=512位
 )
 
 // heapBitsInSpan returns true if the size of an object implies its ptr/scalar
@@ -112,7 +112,7 @@ const (
 func heapBitsInSpan(userSize uintptr) bool {
 	// N.B. minSizeForMallocHeader is an exclusive minimum so that this function is
 	// invariant under size-class rounding on its input.
-	return userSize <= minSizeForMallocHeader
+	return userSize <= minSizeForMallocHeader // 如果一个指针是64位，该判断是 userSize <= 512
 }
 
 // typePointers is an iterator over the pointers in a heap object.
@@ -1337,7 +1337,7 @@ func reflect_verifyNotInHeapPtr(p uintptr) bool {
 	return spanOf(p) == nil && p != clobberdeadPtr
 }
 
-const ptrBits = 8 * goarch.PtrSize
+const ptrBits = 8 * goarch.PtrSize // 指针大小（32或者64位）
 
 // bulkBarrierBitmap executes write barriers for copying from [src,
 // src+size) to [dst, dst+size) using a 1-bit pointer bitmap. src is

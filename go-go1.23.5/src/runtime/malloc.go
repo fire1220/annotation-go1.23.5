@@ -110,9 +110,9 @@ import (
 )
 
 const (
-	maxTinySize   = _TinySize
+	maxTinySize   = _TinySize // 微对象分配阈值16B（字节），微对象 < 16K
 	tinySizeClass = _TinySizeClass
-	maxSmallSize  = _MaxSmallSize
+	maxSmallSize  = _MaxSmallSize // 小对象分配的阈值32KB（千字节），16K <= 小对象分配 < 32KB
 
 	pageShift = _PageShift
 	pageSize  = _PageSize
@@ -1062,7 +1062,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	var span *mspan
 	var header **_type
 	var x unsafe.Pointer
-	noscan := typ == nil || !typ.Pointers() // tpy==nil表示无类型，和类型中没有指针
+	noscan := typ == nil || !typ.Pointers() // 是否无指针(tpy==nil表示无类型 || 类型中没有指针)
 	// In some cases block zeroing can profitably (for latency reduction purposes)
 	// be delayed till preemption is possible; delayedZeroing tracks that state.
 	delayedZeroing := false
@@ -1076,8 +1076,8 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	// size class has a single object in it already, precisely to make the transition
 	// to large objects smooth.
 	// 根据要分配的大小，分为微对象、小对象、大对象三类
-	if size <= maxSmallSize-mallocHeaderSize { // 微对象或小对象分配(小于32KB)
-		if noscan && size < maxTinySize { // 微对象分配(没有指针，并且小于16KB)
+	if size <= maxSmallSize-mallocHeaderSize { // 微对象或小对象分配(小于32KB)(maxSmallSize-mallocHeaderSize = 32768 - 8 = 32760 = 32KB)
+		if noscan && size < maxTinySize { // 微对象分配(没有指针，并且小于16KB)(noscan && size < maxTinySize == 无指针 && size <= 16B)
 			// Tiny allocator.
 			//
 			// Tiny allocator combines several tiny allocation requests
@@ -1155,7 +1155,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			}
 			size = maxTinySize // 由于是拿个新span，这个在后有其他处理，比如检查数据竞争，debug等会用到
 		} else { // 小对象分配
-			hasHeader := !noscan && !heapBitsInSpan(size)
+			hasHeader := !noscan && !heapBitsInSpan(size) // 有指针 并且 size>512 (这里是按照指针是64位来计算的)
 			if hasHeader {
 				size += mallocHeaderSize
 			}
@@ -1172,7 +1172,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			if v == 0 {
 				v, span, shouldhelpgc = c.nextFree(spc) // 到mcentral中获取
 			}
-			x = unsafe.Pointer(v)
+			x = unsafe.Pointer(v) // 可用内存首地址
 			if needzero && span.needzero != 0 {
 				memclrNoHeapPointers(x, size)
 			}

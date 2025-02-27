@@ -3,6 +3,7 @@
 
 package runtime
 
+// 对象ID   对象大小    span大小   对象(块)个数  碎片大小   最大碎片比例
 // class  bytes/obj  bytes/span  objects  tail waste  max waste  min align
 //     1          8        8192     1024           0     87.50%          8
 //     2         16        8192      512           0     43.75%         16
@@ -83,7 +84,7 @@ package runtime
 
 const (
 	minHeapAlign    = 8
-	_MaxSmallSize   = 32768
+	_MaxSmallSize   = 32768 // 小对象分配阈值，32KB（千字节）
 	smallSizeDiv    = 8
 	smallSizeMax    = 1024
 	largeSizeDiv    = 128
