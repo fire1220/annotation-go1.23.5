@@ -1103,13 +1103,13 @@ func (s *mspan) nextFreeIndex() uint16 {
 		// Refill s.allocCache with the next 64 alloc bits.
 		s.refillAllocCache(whichByte)          // 重新装填64位缓存
 		aCache = s.allocCache                  // 拿出缓存内容
-		bitIndex = sys.TrailingZeros64(aCache) // 计算ctz右尾零个数(0表示已占用)
+		bitIndex = sys.TrailingZeros64(aCache) // 获取已分配的块的个数（计算ctz右尾零个数(0表示已占用))
 		// nothing available in cached bits
 		// grab the next 8 bytes and try again.
 	}
-	result := sfreeindex + uint16(bitIndex)
-	if result >= snelems {
-		s.freeindex = snelems
+	result := sfreeindex + uint16(bitIndex) // 当前空闲位下标 + 已分配块个数 = 当前要分配的空闲块下标
+	if result >= snelems {                  // 如果空闲块下标 >= span的总块数，则把下一个空闲块下标设置成总块个数，并返回总块个数
+		s.freeindex = snelems // 这里表示下一个空闲快已经超出,因为下标是从0开始，最大有效数是snelems-1
 		return snelems
 	}
 
