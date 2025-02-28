@@ -513,7 +513,7 @@ type mspan struct {
 	state                 mSpanStateBox // mSpanInUse etc; accessed atomically (get/set methods)
 	needzero              uint8         // needs to be zeroed before allocation
 	isUserArenaChunk      bool          // whether or not this span represents a user arena
-	allocCountBeforeCache uint16        // a copy of allocCount that is stored just before this span is cached
+	allocCountBeforeCache uint16        // 存储在分配跨度类前对象使用数量 // a copy of allocCount that is stored just before this span is cached
 	elemsize              uintptr       // 每块占用内存大小 // computed from sizeclass or from npages
 	limit                 uintptr       // span内存结尾地址 // end of data in span
 	speciallock           mutex         // guards specials list and changes to pinnerBits

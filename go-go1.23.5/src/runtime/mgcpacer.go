@@ -85,8 +85,9 @@ const (
 // GOMAXPROCS. The high-level design of this algorithm is documented
 // at https://github.com/golang/proposal/blob/master/design/44167-gc-pacer-redesign.md.
 // See https://golang.org/s/go15gcpacing for additional historical context.
-var gcController gcControllerState
+var gcController gcControllerState // 全局GC控制统计信息
 
+// 全局GC控制统计信息
 type gcControllerState struct {
 	// Initialized from GOGC. GOGC=off means no GC.
 	gcPercent atomic.Int32
@@ -356,7 +357,7 @@ type gcControllerState struct {
 	heapInUse    sysMemStat    // bytes in mSpanInUse spans
 	heapReleased sysMemStat    // bytes released to the OS
 	heapFree     sysMemStat    // bytes not in any span, but not released to the OS
-	totalAlloc   atomic.Uint64 // total bytes allocated
+	totalAlloc   atomic.Uint64 // 分配的所有bytes数（分配的内大小） total bytes allocated
 	totalFree    atomic.Uint64 // total bytes freed
 	mappedReady  atomic.Uint64 // total virtual memory in the Ready state (see mem.go).
 

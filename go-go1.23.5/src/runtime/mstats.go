@@ -665,6 +665,7 @@ func (s *sysMemStat) add(n int64) {
 // heapStatsDelta contains deltas of various runtime memory statistics
 // that need to be updated together in order for them to be kept
 // consistent with one another.
+// 注释：一个环形的用于存储内存的统计信息
 type heapStatsDelta struct {
 	// Memory stats.
 	committed       int64 // byte delta of memory committed
@@ -678,10 +679,10 @@ type heapStatsDelta struct {
 	//
 	// These are all uint64 because they're cumulative, and could quickly wrap
 	// around otherwise.
-	tinyAllocCount  uint64                  // number of tiny allocations
+	tinyAllocCount  uint64                  // 微对象分配对象数量 number of tiny allocations
 	largeAlloc      uint64                  // bytes allocated for large objects
 	largeAllocCount uint64                  // number of large object allocations
-	smallAllocCount [_NumSizeClasses]uint64 // number of allocs for small objects
+	smallAllocCount [_NumSizeClasses]uint64 // 跨度类小对象分配(使用)数量，每个跨度里有一个 // number of allocs for small objects
 	largeFree       uint64                  // bytes freed for large objects (>maxSmallSize)
 	largeFreeCount  uint64                  // number of frees for large objects (>maxSmallSize)
 	smallFreeCount  [_NumSizeClasses]uint64 // number of frees for small objects (<=maxSmallSize)
@@ -742,11 +743,11 @@ type consistentHeapStats struct {
 	// of 2: one is for the writers, one contains the most recent
 	// data, and the last one is clear so writers can begin writing
 	// to it the moment gen is updated.
-	stats [3]heapStatsDelta
+	stats [3]heapStatsDelta // 环形缓冲区 gen 是他的索引
 
 	// gen represents the current index into which writers
 	// are writing, and can take on the value of 0, 1, or 2.
-	gen atomic.Uint32
+	gen atomic.Uint32 // 环形缓冲区的索引，值是0,1,2
 
 	// noPLock is intended to provide mutual exclusion for updating
 	// stats when no P is available. It does not block other writers
@@ -772,11 +773,13 @@ type consistentHeapStats struct {
 // lead to a stack allocation that could reenter the
 // function.
 //
+// 注释：获取跨度类统计信息
+//
 //go:nosplit
 func (m *consistentHeapStats) acquire() *heapStatsDelta {
 	if pp := getg().m.p.ptr(); pp != nil {
-		seq := pp.statsSeq.Add(1)
-		if seq%2 == 0 {
+		seq := pp.statsSeq.Add(1) // 装填加1(奇数时表示正在写入)
+		if seq%2 == 0 {           // 如果是偶数表示为写入，则报错
 			// Should have been incremented to odd.
 			print("runtime: seq=", seq, "\n")
 			throw("bad sequence number")
@@ -784,8 +787,8 @@ func (m *consistentHeapStats) acquire() *heapStatsDelta {
 	} else {
 		lock(&m.noPLock)
 	}
-	gen := m.gen.Load() % 3
-	return &m.stats[gen]
+	gen := m.gen.Load() % 3 // 获取环形缓冲区索引
+	return &m.stats[gen]    // 返回指定索引的环形缓冲区的值，用于存储跨度类统计信息
 }
 
 // release indicates that the writer is done modifying

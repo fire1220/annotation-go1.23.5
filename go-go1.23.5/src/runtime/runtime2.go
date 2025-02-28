@@ -743,6 +743,8 @@ type p struct {
 
 	// statsSeq is a counter indicating whether this P is currently
 	// writing any stats. Its value is even when not, odd when it is.
+	// 译：statsSeq 是一个计数器，表示当前的 P 是否正在写入任何统计信息。
+	// 	  其值为偶数时表示未写入，奇数时表示正在写入。
 	statsSeq atomic.Uint32
 
 	// Timer heap.

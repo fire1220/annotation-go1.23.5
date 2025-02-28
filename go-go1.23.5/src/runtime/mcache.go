@@ -154,6 +154,7 @@ func getMCache(mp *m) *mcache {
 //
 // Must run in a non-preemptible context since otherwise the owner of
 // c could change.
+// 注释：重新装填，把mcentral(或mheap)装填到mcache中
 func (c *mcache) refill(spc spanClass) {
 	// Return the current cached span to the central lists.
 	s := c.alloc[spc] // 获取对应的跨度类
@@ -169,23 +170,23 @@ func (c *mcache) refill(spc spanClass) {
 		mheap_.central[spc].mcentral.uncacheSpan(s) // 注释：把跨度类放到已分配(非缓存)的队列里(这里包括:有空闲链表和无空闲链表)
 
 		// Count up how many slots were used and record it.
-		stats := memstats.heapStats.acquire()
-		slotsUsed := int64(s.allocCount) - int64(s.allocCountBeforeCache)
-		atomic.Xadd64(&stats.smallAllocCount[spc.sizeclass()], slotsUsed)
+		stats := memstats.heapStats.acquire()                             // 获取内存统计
+		slotsUsed := int64(s.allocCount) - int64(s.allocCountBeforeCache) // 当前跨度类中已使用的对象数(所有分配对象数-申请前已分配对象数)
+		atomic.Xadd64(&stats.smallAllocCount[spc.sizeclass()], slotsUsed) // 存储统计小对象分配的对象个数
 
 		// Flush tinyAllocs.
-		if spc == tinySpanClass {
-			atomic.Xadd64(&stats.tinyAllocCount, int64(c.tinyAllocs))
-			c.tinyAllocs = 0
+		if spc == tinySpanClass { // 如果是微对象
+			atomic.Xadd64(&stats.tinyAllocCount, int64(c.tinyAllocs)) // 存储统计微对象分配的对象个数
+			c.tinyAllocs = 0                                          // 清空当前跨度类的微对线分配数量
 		}
-		memstats.heapStats.release()
+		memstats.heapStats.release() // 释放内存统计
 
 		// Count the allocs in inconsistent, internal stats.
 		bytesAllocated := slotsUsed * int64(s.elemsize)
-		gcController.totalAlloc.Add(bytesAllocated)
+		gcController.totalAlloc.Add(bytesAllocated) // 更新内存统计(更新分配的总内存大小)
 
 		// Clear the second allocCount just to be safe.
-		s.allocCountBeforeCache = 0
+		s.allocCountBeforeCache = 0 // 清空当前跨度类的旧的已使用的对象数
 	}
 
 	// Get a new cached span from the central lists.
