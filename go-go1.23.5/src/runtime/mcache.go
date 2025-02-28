@@ -166,7 +166,7 @@ func (c *mcache) refill(spc spanClass) {
 		if s.sweepgen != mheap_.sweepgen+3 {
 			throw("bad sweepgen in refill")
 		}
-		mheap_.central[spc].mcentral.uncacheSpan(s) // 把跨度类放到mcentral非缓存队列里（非缓存包括：）
+		mheap_.central[spc].mcentral.uncacheSpan(s) // 注释：把跨度类放到已分配(非缓存)的队列里(这里包括:有空闲链表和无空闲链表)
 
 		// Count up how many slots were used and record it.
 		stats := memstats.heapStats.acquire()
@@ -189,7 +189,7 @@ func (c *mcache) refill(spc spanClass) {
 	}
 
 	// Get a new cached span from the central lists.
-	s = mheap_.central[spc].mcentral.cacheSpan()
+	s = mheap_.central[spc].mcentral.cacheSpan() // 从mheap中拿出一个跨度类
 	if s == nil {
 		throw("out of memory")
 	}
@@ -200,10 +200,10 @@ func (c *mcache) refill(spc spanClass) {
 
 	// Indicate that this span is cached and prevent asynchronous
 	// sweeping in the next sweep phase.
-	s.sweepgen = mheap_.sweepgen + 3
+	s.sweepgen = mheap_.sweepgen + 3 // 设置成已清理状态
 
 	// Store the current alloc count for accounting later.
-	s.allocCountBeforeCache = s.allocCount
+	s.allocCountBeforeCache = s.allocCount // 备份跨度类中已使用的对象数
 
 	// Update heapLive and flush scanAlloc.
 	//
@@ -218,7 +218,7 @@ func (c *mcache) refill(spc spanClass) {
 	// the pacer to believe that it's in better shape than it is,
 	// which appears to lead to more memory used. See #53738 for
 	// more details.
-	usedBytes := uintptr(s.allocCount) * s.elemsize
+	usedBytes := uintptr(s.allocCount) * s.elemsize // 已使用的偏移量
 	gcController.update(int64(s.npages*pageSize)-int64(usedBytes), int64(c.scanAlloc))
 	c.scanAlloc = 0
 
