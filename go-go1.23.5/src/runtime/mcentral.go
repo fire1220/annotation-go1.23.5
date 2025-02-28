@@ -40,8 +40,8 @@ type mcentral struct {
 	// to the appropriate swept list. As a result, the parts of the
 	// sweeper and mcentral that do consume from the unswept list may
 	// encounter swept spans, and these should be ignored.
-	partial [2]spanSet // list of spans with a free object
-	full    [2]spanSet // list of spans with no free objects
+	partial [2]spanSet // 注释：【有空闲】的span链表(两个元素分别表示GC【已清理】和【未清理】两类数组，通过清理计数器来区分，清理开始的时候计数器自增2) //  list of spans with a free object
+	full    [2]spanSet // 注释：【无空闲】的span链表(两个元素分别表示GC【已清理】和【未清理】两类数组，通过清理计数器来区分，清理开始的时候计数器自增2)  // list of spans with no free objects
 }
 
 // Initialize a single central free list.
@@ -201,26 +201,27 @@ havespan:
 //
 // s must have a span class corresponding to this
 // mcentral and it must not be empty.
+// 注释：把跨度类放到已分配(非缓存)的队列里(这里包括:有空闲链表和无空闲链表)
 func (c *mcentral) uncacheSpan(s *mspan) {
 	if s.allocCount == 0 {
 		throw("uncaching span but s.allocCount == 0")
 	}
 
 	sg := mheap_.sweepgen
-	stale := s.sweepgen == sg+1
+	stale := s.sweepgen == sg+1 // 是否需要清理
 
 	// Fix up sweepgen.
-	if stale {
+	if stale { // 是否需要清理
 		// Span was cached before sweep began. It's our
 		// responsibility to sweep it.
 		//
 		// Set sweepgen to indicate it's not cached but needs
 		// sweeping and can't be allocated from. sweep will
 		// set s.sweepgen to indicate s is swept.
-		atomic.Store(&s.sweepgen, sg-1)
+		atomic.Store(&s.sweepgen, sg-1) // 把 sweepgen 设置成 h->sweepgen - 1【正在清理、未缓存】span(跨度)正在扫描标记。(理解为重新清理过程中的状态，从新清理是-2,过程中会+1，所以状态为-1)
 	} else {
 		// Indicate that s is no longer cached.
-		atomic.Store(&s.sweepgen, sg)
+		atomic.Store(&s.sweepgen, sg) // 把 sweepgen 设置成 h->sweepgen【已经清理、未缓存】span(跨度)清扫标记完成，准备使用。
 	}
 
 	// Put the span in the appropriate place.
@@ -233,15 +234,15 @@ func (c *mcentral) uncacheSpan(s *mspan) {
 		// itself holds up sweep completion until all mcaches
 		// have been swept.
 		ss := sweepLocked{s}
-		ss.sweep(false)
+		ss.sweep(false) // 开始清理
 	} else {
-		if int(s.nelems)-int(s.allocCount) > 0 {
+		if int(s.nelems)-int(s.allocCount) > 0 { // 有空闲，总数对象数 > 使用对象数
 			// Put it back on the partial swept list.
-			c.partialSwept(sg).push(s)
+			c.partialSwept(sg).push(s) // 放到有空闲链表中
 		} else {
 			// There's no free space and it's not stale, so put it on the
 			// full swept list.
-			c.fullSwept(sg).push(s)
+			c.fullSwept(sg).push(s) // 放到无空闲链表中
 		}
 	}
 }

@@ -156,17 +156,17 @@ func getMCache(mp *m) *mcache {
 // c could change.
 func (c *mcache) refill(spc spanClass) {
 	// Return the current cached span to the central lists.
-	s := c.alloc[spc]
+	s := c.alloc[spc] // 获取对应的跨度类
 
 	if s.allocCount != s.nelems {
 		throw("refill of span with free space remaining")
 	}
-	if s != &emptymspan {
+	if s != &emptymspan { // 如果跨度类不是首次分配（初始化跨度类的时候会赋值&emptymspan）
 		// Mark this span as no longer cached.
 		if s.sweepgen != mheap_.sweepgen+3 {
 			throw("bad sweepgen in refill")
 		}
-		mheap_.central[spc].mcentral.uncacheSpan(s)
+		mheap_.central[spc].mcentral.uncacheSpan(s) // 把跨度类放到mcentral非缓存队列里（非缓存包括：）
 
 		// Count up how many slots were used and record it.
 		stats := memstats.heapStats.acquire()

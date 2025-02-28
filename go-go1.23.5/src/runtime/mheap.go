@@ -498,7 +498,14 @@ type mspan struct {
 	// if sweepgen == h->sweepgen + 1, the span was cached before sweep began and is still cached, and needs sweeping
 	// if sweepgen == h->sweepgen + 3, the span was swept and then cached and is still cached
 	// h->sweepgen is incremented by 2 after every GC
-
+	// 译：
+	// 清理阶段
+	// 如果sweepgen == h->sweepgen - 2，【需要清理、未缓存】span(跨度)需要清扫标记。(理解为重新清扫一下，因为每次清扫完成后会自动加2)
+	// 如果sweepgen == h->sweepgen - 1，【正在清理、未缓存】span(跨度)正在扫描标记。(理解为重新清理过程中的状态，从新清理是-2,过程中会+1，所以状态为-1)
+	// 如果sweepgen == h->sweepgen，    【已经清理、未缓存】span(跨度)清扫标记完成，准备使用。
+	// 如果sweepgen == h->sweepgen + 1，【需要清理、已缓存】span(跨度)在扫描开始前在mcache缓存中，现在仍在mchche缓存中，需要扫描
+	// 如果sweepgen == h->sweepgen + 3，【无需清理、已缓存】span(跨度)已经被扫描，并放到mcache缓存中
+	// h->sweepgen在每次垃圾回收后会增加2。
 	sweepgen              uint32
 	divMul                uint32        // for divide by elemsize
 	allocCount            uint16        // 已分配的数量 // number of allocated objects
