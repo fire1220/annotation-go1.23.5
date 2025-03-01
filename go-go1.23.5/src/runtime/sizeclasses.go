@@ -89,7 +89,7 @@ const (
 	smallSizeMax    = 1024
 	largeSizeDiv    = 128
 	_NumSizeClasses = 68
-	_PageShift      = 13 // 页大小 = 1 < 13 (8KB)
+	_PageShift      = 13 // 用于计算：页大小 = 1 < 13 (8KB)
 	maxObjsPerSpan  = 1024
 )
 

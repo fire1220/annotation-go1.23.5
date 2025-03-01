@@ -232,8 +232,8 @@ func (c *mcache) allocLarge(size uintptr, noscan bool) *mspan {
 	if size+_PageSize < size {
 		throw("out of memory")
 	}
-	npages := size >> _PageShift
-	if size&_PageMask != 0 {
+	npages := size >> _PageShift // 计算页块数
+	if size&_PageMask != 0 {     // 如果size不为8KB的倍数，则页块数+1
 		npages++
 	}
 
