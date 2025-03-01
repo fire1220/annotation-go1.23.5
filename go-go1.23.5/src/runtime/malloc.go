@@ -117,7 +117,7 @@ const (
 	pageShift = _PageShift
 	pageSize  = _PageSize
 
-	_PageSize = 1 << _PageShift
+	_PageSize = 1 << _PageShift // 页大小 = 1 < 13 (8KB)
 	_PageMask = _PageSize - 1
 
 	// _64bit = 1 on 64-bit systems, 0 on 32-bit systems

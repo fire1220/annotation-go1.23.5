@@ -860,20 +860,20 @@ func (c *gcControllerState) markWorkerStop(mode gcMarkWorkerMode, duration int64
 }
 
 func (c *gcControllerState) update(dHeapLive, dHeapScan int64) {
-	if dHeapLive != 0 {
-		trace := traceAcquire()
-		live := gcController.heapLive.Add(dHeapLive)
-		if trace.ok() {
+	if dHeapLive != 0 { // 如果 dHeapLive 不为 0，则更新 heapLive
+		trace := traceAcquire()                      // 获取 trace(跟踪) 对象
+		live := gcController.heapLive.Add(dHeapLive) // 更新 gcController 的 heapLive
+		if trace.ok() {                              // 如果 trace(跟踪) 对象有效，则更新 trace 的堆分配量
 			// gcController.heapLive changed.
-			trace.HeapAlloc(live)
-			traceRelease(trace)
+			trace.HeapAlloc(live) // 更新 trace 的堆分配量
+			traceRelease(trace)   // 释放 trace 对象
 		}
 	}
-	if gcBlackenEnabled == 0 {
+	if gcBlackenEnabled == 0 { // 如果当前不在 GC 阶段（gcBlackenEnabled == 0），则更新 heapScan
 		// Update heapScan when we're not in a current GC. It is fixed
 		// at the beginning of a cycle.
 		if dHeapScan != 0 {
-			gcController.heapScan.Add(dHeapScan)
+			gcController.heapScan.Add(dHeapScan) // 更新 gcController 的 heapScan
 		}
 	} else {
 		// gcController.heapLive changed.

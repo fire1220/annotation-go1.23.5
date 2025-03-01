@@ -23,7 +23,7 @@ type mcache struct {
 	// The following members are accessed on every malloc,
 	// so they are grouped here for better caching.
 	nextSample uintptr // trigger heap sample after allocating this many bytes
-	scanAlloc  uintptr // bytes of scannable heap allocated
+	scanAlloc  uintptr // 分配的可扫描字节数// bytes of scannable heap allocated
 
 	// Allocator cache for tiny objects w/o pointers.
 	// See "Tiny allocator" comment in malloc.go.
@@ -220,6 +220,7 @@ func (c *mcache) refill(spc spanClass) {
 	// which appears to lead to more memory used. See #53738 for
 	// more details.
 	usedBytes := uintptr(s.allocCount) * s.elemsize // 已使用的偏移量
+	// int64(s.npages*pageSize)-int64(usedBytes) 页块数*页大小8KB-已使用的偏移量=剩余空闲内存
 	gcController.update(int64(s.npages*pageSize)-int64(usedBytes), int64(c.scanAlloc))
 	c.scanAlloc = 0
 

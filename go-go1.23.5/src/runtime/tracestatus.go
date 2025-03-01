@@ -14,12 +14,13 @@ import "internal/runtime/atomic"
 // statuses.
 type traceGoStatus uint8
 
+// goroutine的状态常量
 const (
-	traceGoBad traceGoStatus = iota
-	traceGoRunnable
-	traceGoRunning
-	traceGoSyscall
-	traceGoWaiting
+	traceGoBad      traceGoStatus = iota // 无效状态
+	traceGoRunnable                      // 可运行状态
+	traceGoRunning                       // 正在运行状态
+	traceGoSyscall                       // 系统调用状态
+	traceGoWaiting                       // 等待状态
 )
 
 // traceProcStatus is the status of a P.
@@ -27,11 +28,12 @@ const (
 // They mostly correspond to the various P statuses.
 type traceProcStatus uint8
 
+// 进程（P）在跟踪时的不同状态
 const (
-	traceProcBad traceProcStatus = iota
-	traceProcRunning
-	traceProcIdle
-	traceProcSyscall
+	traceProcBad     traceProcStatus = iota // 无效状态
+	traceProcRunning                        // 正在运行状态
+	traceProcIdle                           // 空闲状态
+	traceProcSyscall                        // 系统调用状态
 
 	// traceProcSyscallAbandoned is a special case of
 	// traceProcSyscall. It's used in the very specific case
@@ -42,7 +44,12 @@ const (
 	// special state indicates this to the parser, so it
 	// doesn't try to find a GoSyscallEndBlocked that
 	// corresponds with the ProcSteal.
-	traceProcSyscallAbandoned
+	// 译：
+	// traceProcSyscallAbandoned 是 traceProcSyscall 的一个特例。它用于非常特殊的情况，
+	// 即某个 P（处理器）在一个生成周期中首次被提及，并且是 ProcSteal 事件的一部分。
+	// 如果这是它首次被提及，则没有 GoSyscallBegin 事件将其与 ProcSteal 连接起来。
+	// 这个特殊状态会通知解析器，使其不会尝试查找与 ProcSteal 对应的 GoSyscallEndBlocked。
+	traceProcSyscallAbandoned // 系统调用状态（Abandoned）
 )
 
 // writeGoStatus emits a GoStatus event as well as any active ranges on the goroutine.
