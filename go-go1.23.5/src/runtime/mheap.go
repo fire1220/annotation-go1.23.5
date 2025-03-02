@@ -813,6 +813,8 @@ func (h *mheap) init() {
 // reclaim implements the page-reclaimer half of the sweeper.
 //
 // h.lock must NOT be held.
+// 译：reclaim 函数用于在分配 npage 页之前，回收至少 npage 页到堆中，以控制内存增长。它是垃圾回收器的一部分，负责页面回收。
+// 调用时不能持有 h.lock。
 func (h *mheap) reclaim(npage uintptr) {
 	// TODO(austin): Half of the time spent freeing spans is in
 	// locking/unlocking the heap (even with low contention). We
