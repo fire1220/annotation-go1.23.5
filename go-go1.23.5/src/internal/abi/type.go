@@ -17,6 +17,14 @@ import (
 // or the functions in compiletype.go to access this type instead.
 // (TODO: this admonition applies to every type in this package.
 // Put it in some shared location?)
+// 译：
+// Type 是 Go 类型在运行时的表示。
+//
+// 在构建时访问此类型时要小心，因为编译器/链接器中的此类型版本可能与目标二进制文件中的布局不同，
+// 这是由于指针宽度差异和任何实验导致的。请改用 cmd/compile/internal/rttype
+// 或 compiletype.go 中的函数来访问此类型。（TODO：此警告适用于此包中的每个类型。
+// 可以将其放在某个共享位置？）
+// 注释：运行时类型，在运行时表示一个Go类型。
 type Type struct {
 	Size_       uintptr
 	PtrBytes    uintptr // 如果等于0表示该类型无指针 // number of (prefix) bytes in the type that can contain pointers

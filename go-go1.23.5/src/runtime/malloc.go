@@ -1155,7 +1155,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			}
 			size = maxTinySize // 由于是拿个新span，这个在后有其他处理，比如检查数据竞争，debug等会用到
 		} else { // 小对象分配
-			hasHeader := !noscan && !heapBitsInSpan(size) // 有指针 并且 size>512 (这里是按照指针是64位来计算的)
+			hasHeader := !noscan && !heapBitsInSpan(size) // (头部信息，用于存储运行时的类型)有指针 并且 size>512 (这里是按照指针是64位来计算的)
 			if hasHeader {
 				size += mallocHeaderSize
 			}
@@ -1174,12 +1174,12 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			}
 			x = unsafe.Pointer(v) // 可用内存首地址
 			if needzero && span.needzero != 0 {
-				memclrNoHeapPointers(x, size)
+				memclrNoHeapPointers(x, size) // 内存空间清零
 			}
-			if hasHeader {
-				header = (**_type)(x)
-				x = add(x, mallocHeaderSize)
-				size -= mallocHeaderSize
+			if hasHeader { // 有头部信息,用于存储运行时的类型信息
+				header = (**_type)(x)        // 类型头部信息(这里是个指针)
+				x = add(x, mallocHeaderSize) // 申请的大小需要加入一个指针，这个指针就是存储类型的指针
+				size -= mallocHeaderSize     // 减去头部信息,后面分析内存数据时使用，比如开启数据竞争分析等。
 			}
 		}
 	} else { // 大对象分配
