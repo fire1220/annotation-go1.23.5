@@ -247,28 +247,28 @@ func (c *mcache) allocLarge(size uintptr, noscan bool) *mspan {
 	deductSweepCredit(npages*_PageSize, npages)
 
 	spc := makeSpanClass(0, noscan) // 创建一个跨度类id是0的跨度类(id=0表示大对象)
-	s := mheap_.alloc(npages, spc)  // 分配内存空间(通过所需的页数和跨度类id申请内存空间)
+	s := mheap_.alloc(npages, spc)  // 在堆中申请内存空间(通过所需的页数和跨度类id申请内存空间)
 	if s == nil {
 		throw("out of memory")
 	}
 
 	// Count the alloc in consistent, external stats.
-	stats := memstats.heapStats.acquire()
-	atomic.Xadd64(&stats.largeAlloc, int64(npages*pageSize))
-	atomic.Xadd64(&stats.largeAllocCount, 1)
-	memstats.heapStats.release()
+	stats := memstats.heapStats.acquire()                    // 获取全局内存统计
+	atomic.Xadd64(&stats.largeAlloc, int64(npages*pageSize)) // 大对象的分配统计
+	atomic.Xadd64(&stats.largeAllocCount, 1)                 // 大对象的个数统计
+	memstats.heapStats.release()                             // 释放全局内存统计
 
 	// Count the alloc in inconsistent, internal stats.
-	gcController.totalAlloc.Add(int64(npages * pageSize))
+	gcController.totalAlloc.Add(int64(npages * pageSize)) // 更新内存统计(更新分配的总内存大小)
 
 	// Update heapLive.
-	gcController.update(int64(s.npages*pageSize), 0)
+	gcController.update(int64(s.npages*pageSize), 0) // 更新堆内存中存活对象的状态。
 
 	// Put the large span in the mcentral swept list so that it's
 	// visible to the background sweeper.
-	mheap_.central[spc].mcentral.fullSwept(mheap_.sweepgen).push(s)
-	s.limit = s.base() + size
-	s.initHeapBits(false)
+	mheap_.central[spc].mcentral.fullSwept(mheap_.sweepgen).push(s) // 放到mcentral无空闲链表里
+	s.limit = s.base() + size                                       // 分配的结尾位置
+	s.initHeapBits(false)                                           // 初始化堆位图
 	return s
 }
 

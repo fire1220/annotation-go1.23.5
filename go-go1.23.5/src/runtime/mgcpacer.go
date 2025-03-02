@@ -859,6 +859,7 @@ func (c *gcControllerState) markWorkerStop(mode gcMarkWorkerMode, duration int64
 	}
 }
 
+// 更新堆内存中存活对象的状态。
 func (c *gcControllerState) update(dHeapLive, dHeapScan int64) {
 	if dHeapLive != 0 { // 如果 dHeapLive 不为 0，则更新 heapLive
 		trace := traceAcquire()                      // 获取 trace(跟踪) 对象

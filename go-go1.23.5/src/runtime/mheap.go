@@ -512,7 +512,7 @@ type mspan struct {
 	spanclass             spanClass     // 跨度类运行时的id(最后一位表示是否包含指针，其余位表示跨度类id) // size class and noscan (uint8)
 	state                 mSpanStateBox // mSpanInUse etc; accessed atomically (get/set methods)
 	needzero              uint8         // needs to be zeroed before allocation
-	isUserArenaChunk      bool          // whether or not this span represents a user arena
+	isUserArenaChunk      bool          // span是否代表用户arena。如果为true，则表示该span是用户arena的一部分；否则不是 // whether or not this span represents a user arena
 	allocCountBeforeCache uint16        // 存储在分配跨度类前对象使用数量 // a copy of allocCount that is stored just before this span is cached
 	elemsize              uintptr       // 每块占用内存大小 // computed from sizeclass or from npages
 	limit                 uintptr       // span内存结尾地址 // end of data in span
@@ -815,6 +815,7 @@ func (h *mheap) init() {
 // h.lock must NOT be held.
 // 译：reclaim 函数用于在分配 npage 页之前，回收至少 npage 页到堆中，以控制内存增长。它是垃圾回收器的一部分，负责页面回收。
 // 调用时不能持有 h.lock。
+// 注释：确保npage页清扫完成（内存空间被回收）
 func (h *mheap) reclaim(npage uintptr) {
 	// TODO(austin): Half of the time spent freeing spans is in
 	// locking/unlocking the heap (even with low contention). We
@@ -990,7 +991,7 @@ func (s spanAllocType) manual() bool {
 //
 // Returns a span that has been fully initialized. span.needzero indicates
 // whether the span has been zeroed. Note that it may not be.
-// 注释：分配内存空间(通过所需的页数和跨度类id申请内存空间)
+// 注释：在堆中分配内存空间(通过所需的页数和跨度类id申请内存空间)
 func (h *mheap) alloc(npages uintptr, spanclass spanClass) *mspan {
 	// Don't do any operations that lock the heap on the G stack.
 	// It might trigger stack growth, and the stack growth code needs
@@ -1000,9 +1001,9 @@ func (h *mheap) alloc(npages uintptr, spanclass spanClass) *mspan {
 		// To prevent excessive heap growth, before allocating n pages
 		// we need to sweep and reclaim at least n pages.
 		if !isSweepDone() { // 如果没有清扫完成
-			h.reclaim(npages)
+			h.reclaim(npages) // 确保npages页清扫完成（内存空间被回收）
 		}
-		s = h.allocSpan(npages, spanAllocHeap, spanclass)
+		s = h.allocSpan(npages, spanAllocHeap, spanclass) // 在堆中申请内存空间
 	})
 	return s
 }
@@ -1207,6 +1208,8 @@ func (h *mheap) freeMSpanLocked(s *mspan) {
 //
 // allocSpan must be called on the system stack both because it acquires
 // the heap lock and because it must block GC transitions.
+//
+// 注释：在堆中申请内存空间
 //
 //go:systemstack
 func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass) (s *mspan) {

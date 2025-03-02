@@ -539,6 +539,7 @@ func bulkBarrierPreWriteSrcOnly(dst, src, size uintptr, typ *abi.Type) {
 // TODO(mknyszek): This should set the heap bits for single pointer
 // allocations eagerly to avoid calling heapSetType at allocation time,
 // just to write one bit.
+// 初始化堆位图
 func (s *mspan) initHeapBits(forceClear bool) {
 	if (!s.spanclass.noscan() && heapBitsInSpan(s.elemsize)) || s.isUserArenaChunk {
 		b := s.heapBits()

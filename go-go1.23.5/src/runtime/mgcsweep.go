@@ -33,6 +33,7 @@ import (
 var sweep sweepdata
 
 // State of background sweep.
+// 背后清扫的状态
 type sweepdata struct {
 	lock   mutex
 	g      *g
@@ -40,7 +41,7 @@ type sweepdata struct {
 
 	// active tracks outstanding sweepers and the sweep
 	// termination condition.
-	active activeSweep
+	active activeSweep //  清扫状态
 
 	// centralIndex is the current unswept span class.
 	// It represents an index into the mcentral span
@@ -117,7 +118,7 @@ func (h *mheap) nextSpanForSweep() *mspan {
 	return nil
 }
 
-const sweepDrainedMask = 1 << 31
+const sweepDrainedMask = 1 << 31 // 标记扫描完成
 
 // activeSweep is a type that captures whether sweeping
 // is done, and whether there are any outstanding sweepers.
@@ -133,7 +134,13 @@ type activeSweep struct {
 	//
 	// The rest of the bits are a counter, indicating the
 	// number of outstanding concurrent sweepers.
-	state atomic.Uint32
+	// 译：状态分为两部分。
+	//	最高位(由sweepDrainedMask屏蔽)是一个布尔值
+	//	值，该值指示是否已完成所有扫描工作
+	//	从队列中清空。
+	//	其余的位是一个计数器，指示
+	//	未完成的并发清除数。
+	state atomic.Uint32 // 状态：高位表示扫描完成，其余表示未扫描计数器
 }
 
 // begin registers a new sweeper. Returns a sweepLocker
@@ -208,8 +215,9 @@ func (a *activeSweep) sweepers() uint32 {
 // isDone returns true if all sweep work has been drained and no more
 // outstanding sweepers exist. That is, when the sweep phase is
 // completely done.
+// 是否清扫完成
 func (a *activeSweep) isDone() bool {
-	return a.state.Load() == sweepDrainedMask
+	return a.state.Load() == sweepDrainedMask // 表示扫描完成
 }
 
 // reset sets up the activeSweep for the next sweep cycle.
