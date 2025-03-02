@@ -57,11 +57,23 @@ func mcall(fn func(*g))
 // to share inputs and outputs with the code around the call
 // to system stack:
 //
-//	... set up y ...
-//	systemstack(func() {
-//		x = bigcall(y)
-//	})
-//	... use x ...
+//	 译：systemstack 在系统栈上运行 fn 函数。
+//		如果 systemstack 被从每个OS线程（g0）栈或信号处理（gsignal）栈调用，
+//		systemstack 直接调用 fn 并返回。
+//		否则，systemstack 是从普通 goroutine 的有限栈中调用的。
+//		在这种情况下，systemstack 切换到每个OS线程栈，调用 fn，然后再切换回来。
+//		常见的做法是使用函数字面量作为参数，以便与调用 systemstack 的代码共享输入和输出：
+//
+//		... set up y ...
+//		systemstack(func() {
+//			x = bigcall(y)
+//		})
+//		... use x ...
+//
+// 注释：切换系统栈执行fn
+// 这段代码的功能是根据调用栈的不同，决定是否切换到系统栈执行函数 fn。具体逻辑如下：
+// 如果当前调用栈是OS线程栈（g0）或信号处理栈（gsignal），直接调用 fn 并返回。
+// 否则，切换到OS线程栈执行 fn，再切回原栈。
 //
 //go:noescape
 func systemstack(fn func())

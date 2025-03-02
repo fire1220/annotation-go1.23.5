@@ -234,7 +234,7 @@ func (c *mcache) allocLarge(size uintptr, noscan bool) *mspan {
 	if size+_PageSize < size {
 		throw("out of memory")
 	}
-	npages := size >> _PageShift // 计算页块数
+	npages := size >> _PageShift // 计算所需的页数
 	if size&_PageMask != 0 {     // 如果size不为8KB的倍数，则页块数+1
 		npages++
 	}
@@ -247,7 +247,7 @@ func (c *mcache) allocLarge(size uintptr, noscan bool) *mspan {
 	deductSweepCredit(npages*_PageSize, npages)
 
 	spc := makeSpanClass(0, noscan) // 创建一个跨度类id是0的跨度类(id=0表示大对象)
-	s := mheap_.alloc(npages, spc)  // 分配内存空间
+	s := mheap_.alloc(npages, spc)  // 分配内存空间(通过所需的页数和跨度类id申请内存空间)
 	if s == nil {
 		throw("out of memory")
 	}

@@ -988,16 +988,16 @@ func (s spanAllocType) manual() bool {
 //
 // Returns a span that has been fully initialized. span.needzero indicates
 // whether the span has been zeroed. Note that it may not be.
-// 注释：分配内存空间,入参是页数量和跨度类id
+// 注释：分配内存空间(通过所需的页数和跨度类id申请内存空间)
 func (h *mheap) alloc(npages uintptr, spanclass spanClass) *mspan {
 	// Don't do any operations that lock the heap on the G stack.
 	// It might trigger stack growth, and the stack growth code needs
 	// to be able to allocate heap.
 	var s *mspan
-	systemstack(func() {
+	systemstack(func() { // 切换到系统站执行
 		// To prevent excessive heap growth, before allocating n pages
 		// we need to sweep and reclaim at least n pages.
-		if !isSweepDone() {
+		if !isSweepDone() { // 如果没有清扫完成
 			h.reclaim(npages)
 		}
 		s = h.allocSpan(npages, spanAllocHeap, spanclass)
