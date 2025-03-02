@@ -907,6 +907,16 @@ func (s *mspan) reportZombies() {
 // sweep phase between GC cycles.
 //
 // mheap_ must NOT be locked.
+//
+//	译：deductSweepCredit 函数用于在分配一个大小为 spanBytes 的内存块之前扣除清扫信用。这必须在内存块分配之前执行，以确保系统有足够的信用。
+//		如果需要，它会执行清扫操作以防止信用赤字。调用者如果也会清扫页面（例如对于大内存分配），可以传递非零的 callerSweepPages 参数，以保留一定数量的未清扫页面。
+//		该函数假设最终分配的所有 spanBytes 字节都将可用于对象分配。
+//		deductSweepCredit 是“比例清扫”系统的中心部分，使用垃圾回收器收集的统计信息来确保在GC周期之间的并发清扫阶段完成所有页面的清扫。
+//		注意：调用此函数时，mheap_ 必须未加锁。
+//
+// 注释：检测并清理，保证分配的是已经清理过，可直接使用的内存
+// 清扫信用（Sweep Credit） 是一个机制，用来跟踪和限制清扫操作的数量。
+// 每次分配内存时，系统会检查是否有足够的清扫信用，以确保在分配新内存之前已经完成了足够多的旧内存清扫
 func deductSweepCredit(spanBytes uintptr, callerSweepPages uintptr) {
 	if mheap_.sweepPagesPerByte == 0 {
 		// Proportional sweep is done or disabled.

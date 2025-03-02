@@ -228,6 +228,8 @@ func (c *mcache) refill(spc spanClass) {
 }
 
 // allocLarge allocates a span for a large object.
+// 注释：大对象分配
+// 计算分配所需的页块数，并调用makeSpanClass()创建一个跨度类id是0的跨度类,调用mheap.alloc()分配内存空间，并纳入mcentral中管理
 func (c *mcache) allocLarge(size uintptr, noscan bool) *mspan {
 	if size+_PageSize < size {
 		throw("out of memory")
@@ -240,10 +242,12 @@ func (c *mcache) allocLarge(size uintptr, noscan bool) *mspan {
 	// Deduct credit for this span allocation and sweep if
 	// necessary. mHeap_Alloc will also sweep npages, so this only
 	// pays the debt down to npage pages.
+	// 译：
+	// 为此跨度分配和清理扣除信用（如果有必要）。mHeap_Alloc也会对npages进行清理，因此这里仅将债务减少到npage页。
 	deductSweepCredit(npages*_PageSize, npages)
 
-	spc := makeSpanClass(0, noscan)
-	s := mheap_.alloc(npages, spc)
+	spc := makeSpanClass(0, noscan) // 创建一个跨度类id是0的跨度类(id=0表示大对象)
+	s := mheap_.alloc(npages, spc)  // 分配内存空间
 	if s == nil {
 		throw("out of memory")
 	}
