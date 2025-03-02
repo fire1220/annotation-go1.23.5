@@ -1111,7 +1111,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 			// Align tiny pointer for required (conservative) alignment.
 			// 偏移量内存大小对齐计算,分别向2、4、8三个等级对齐
 			if size&7 == 0 {
-				off = alignUp(off, 8)
+				off = alignUp(off, 8) // 8字节内存对齐
 			} else if goarch.PtrSize == 4 && size == 12 {
 				// Conservatively align 12-byte objects to 8 bytes on 32-bit
 				// systems so that objects whose first field is a 64-bit
@@ -1119,11 +1119,11 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 				// atomic access. See issue 37262.
 				// TODO(mknyszek): Remove this workaround if/when issue 36606
 				// is resolved.
-				off = alignUp(off, 8)
+				off = alignUp(off, 8) // 8字节内存对齐
 			} else if size&3 == 0 {
-				off = alignUp(off, 4)
+				off = alignUp(off, 4) // 4字节内存对齐
 			} else if size&1 == 0 {
-				off = alignUp(off, 2)
+				off = alignUp(off, 2) // 2字节内存对齐
 			}
 			// 偏移量+数据<=微对象的总大小，并且微对象的基地址有值
 			// 说明微对象可以分配所需要的数据空间
