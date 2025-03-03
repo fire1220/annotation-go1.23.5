@@ -714,7 +714,7 @@ func (span *mspan) writeHeapBitsSmall(x, dataSize uintptr, typ *_type) (scanSize
 // machines, callers must execute a store/store (publication) barrier
 // between calling this function and making the object reachable.
 //
-//	译：heapSetType 记录新分配的内存区间 [x, x+size) 中，
+//	译：heapSetType记录新分配的内存区间 [x, x+size) 中，
 //		在 [x, x+dataSize) 区域内包含一个或多个类型为 typ 的值。（值的数量由 dataSize / typ.Size 给出）
 //		如果 dataSize < size，则 [x+dataSize, x+size) 区域被记录为非指针数据。
 //		已知该类型包含指针；
@@ -733,14 +733,14 @@ func heapSetType(x, dataSize uintptr, typ *_type, header **_type, span *mspan) (
 	const doubleCheck = false
 
 	gctyp := typ
-	if header == nil { // 无类型
+	if header == nil { // 头部类型信息,可用于存储运行时的类型信息
 		if doubleCheck && (!heapBitsInSpan(dataSize) || !heapBitsInSpan(span.elemsize)) {
 			throw("tried to write heap bits, but no heap bits in span")
 		}
 		// Handle the case where we have no malloc header.
 		// 译：处理没有malloc头的情况。
 		scanSize = span.writeHeapBitsSmall(x, dataSize, typ)
-	} else { // 有类型
+	} else { // 头部类型信息,可用于存储运行时的类型信息
 		if typ.Kind_&abi.KindGCProg != 0 {
 			// Allocate space to unroll the gcprog. This space will consist of
 			// a dummy _type value and the unrolled gcprog. The dummy _type will
