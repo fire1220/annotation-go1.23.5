@@ -1,0 +1,9 @@
+.gitattributes
+*.swp
+*.vscode/
+*.project
+nohup.out
+.idea
+null
+.DS_Store
+

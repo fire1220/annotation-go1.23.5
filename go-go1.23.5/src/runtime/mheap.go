@@ -1221,6 +1221,12 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 	// On some platforms we need to provide physical page aligned stack
 	// allocations. Where the page size is less than the physical page
 	// size, we already manage to do this by default.
+	//	在某些平台上，我们需要提供物理页面对齐的栈内存分配。当页面大小小于物理页面大小时，默认情况下我们已经能够处理这种情况以实现物理页面对齐。
+	//	这里的needPhysPageAlign变量用于标识是否需要物理页面对齐的栈分配，它基于三个条件：
+	//    1.physPageAlignedStacks：一个布尔值，表示是否启用了物理页面对齐的栈分配。
+	//    2.typ == spanAllocStack：表示当前分配的类型是否为栈（spanAllocStack类型）。
+	//    3.pageSize < physPageSize：表示当前页面大小是否小于物理页面大小。
+	//	只有当这三个条件同时满足时，needPhysPageAlign才会被设置为true，表示需要进行物理页面对齐的栈分配。
 	needPhysPageAlign := physPageAlignedStacks && typ == spanAllocStack && pageSize < physPageSize
 
 	// If the allocation is small enough, try the page cache!
