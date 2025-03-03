@@ -713,17 +713,34 @@ func (span *mspan) writeHeapBitsSmall(x, dataSize uintptr, typ *_type) (scanSize
 // shared memory that belongs to neighboring objects. Also, on weakly-ordered
 // machines, callers must execute a store/store (publication) barrier
 // between calling this function and making the object reachable.
+//
+//	译：heapSetType 记录新分配的内存区间 [x, x+size) 中，
+//		在 [x, x+dataSize) 区域内包含一个或多个类型为 typ 的值。（值的数量由 dataSize / typ.Size 给出）
+//		如果 dataSize < size，则 [x+dataSize, x+size) 区域被记录为非指针数据。
+//		已知该类型包含指针；
+//		当没有指针时，malloc 不会调用 heapSetType。
+//		heapSetType 和读取堆元数据的操作（如 scanobject）之间可能存在读写竞争。
+//		然而，由于 heapSetType 仅用于尚未被引用的对象，
+//		读取者将忽略此函数修改的位。这意味着此函数不能暂时修改属于相邻对象的共享内存。
+//		此外，在弱序机器上，调用者必须在调用此函数后和使对象可访问之前执行 store/store（发布）屏障。
+//
+//	注释：堆设置类型,如果header!=nil则设置该对象的类型信息。
+//		该函数 heapSetType 用于记录新分配的内存区域中存储的数据类型信息。具体功能如下：
+//		记录 [x, x+dataSize) 区域内的数据为指定类型 typ。
+//		如果 dataSize < size，则 [x+dataSize, x+size) 区域被记录为非指针数据。
+//		函数仅在类型包含指针时调用，确保未被引用的对象在修改元数据时不会引发读写竞争。
 func heapSetType(x, dataSize uintptr, typ *_type, header **_type, span *mspan) (scanSize uintptr) {
 	const doubleCheck = false
 
 	gctyp := typ
-	if header == nil {
+	if header == nil { // 无类型
 		if doubleCheck && (!heapBitsInSpan(dataSize) || !heapBitsInSpan(span.elemsize)) {
 			throw("tried to write heap bits, but no heap bits in span")
 		}
 		// Handle the case where we have no malloc header.
+		// 译：处理没有malloc头的情况。
 		scanSize = span.writeHeapBitsSmall(x, dataSize, typ)
-	} else {
+	} else { // 有类型
 		if typ.Kind_&abi.KindGCProg != 0 {
 			// Allocate space to unroll the gcprog. This space will consist of
 			// a dummy _type value and the unrolled gcprog. The dummy _type will

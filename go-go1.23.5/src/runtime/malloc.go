@@ -1065,7 +1065,10 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	noscan := typ == nil || !typ.Pointers() // 是否无指针(tpy==nil表示无类型 || 类型中没有指针)
 	// In some cases block zeroing can profitably (for latency reduction purposes)
 	// be delayed till preemption is possible; delayedZeroing tracks that state.
-	delayedZeroing := false
+	// 译：在某些情况下，块清零操作可以有利地（为了减少延迟的目的）被延迟到抢占成为可能时执行；delayedZeroing 跟踪该状态。
+	// 注释：块清零操作可以根据需要延迟执行，以减少延迟。
+	//		delayedZeroing 变量用于跟踪是否可以将块清零操作延迟到抢占发生时执行。
+	delayedZeroing := false // 是否需要清零内存
 	// Determine if it's a 'small' object that goes into a size-classed span.
 	//
 	// Note: This comparison looks a little strange, but it exists to smooth out
@@ -1191,17 +1194,17 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 		span.allocCount = 1
 		size = span.elemsize
 		x = unsafe.Pointer(span.base())
-		if needzero && span.needzero != 0 {
+		if needzero && span.needzero != 0 { // 需要清零，并且span不为零
 			delayedZeroing = true
 		}
-		if !noscan {
+		if !noscan { // 如果有指针,则设置span的类型
 			// Tell the GC not to look at this yet.
-			span.largeType = nil
-			header = &span.largeType
+			span.largeType = nil     // 设置大对象类型为空
+			header = &span.largeType // 定义大对象类型
 		}
 	}
-	if !noscan && !delayedZeroing {
-		c.scanAlloc += heapSetType(uintptr(x), dataSize, typ, header, span)
+	if !noscan && !delayedZeroing { // 有指针并且不需要要清零
+		c.scanAlloc += heapSetType(uintptr(x), dataSize, typ, header, span) // 堆设置类型,设置大对象类型,如果header!=nil,则设置大对象类型为header
 	}
 
 	// Ensure that the stores above that initialize x to
