@@ -539,10 +539,18 @@ func bulkBarrierPreWriteSrcOnly(dst, src, size uintptr, typ *abi.Type) {
 // TODO(mknyszek): This should set the heap bits for single pointer
 // allocations eagerly to avoid calling heapSetType at allocation time,
 // just to write one bit.
-// 初始化堆位图
+//
+//	译：initHeapBits 初始化一个 span 的堆位图。
+//	TODO(mknyszek): 应该为单指针分配立即设置堆位图，以避免在分配时调用 heapSetType，
+//	仅仅是为了写入一个位。
+//
+//	注释：初始化堆位图
+//	initHeapBits 函数用于初始化一个 span 的堆位图。如果 span 包含指针或属于用户 arena 块，则将堆位图清零。具体逻辑如下：
+//	1.检查 span 是否包含指针且堆位图在 span 内，或者是否是用户 arena 块。
+//	2.如果条件满足，获取堆位图并清零。
 func (s *mspan) initHeapBits(forceClear bool) {
 	if (!s.spanclass.noscan() && heapBitsInSpan(s.elemsize)) || s.isUserArenaChunk {
-		b := s.heapBits()
+		b := s.heapBits() // 把内存转换成slice
 		clear(b)
 	}
 }
@@ -559,6 +567,7 @@ func (s *mspan) initHeapBits(forceClear bool) {
 // uintptrs will have their byte orders swapped from what they normally would be.
 //
 // heapBitsInSpan(span.elemsize) or span.isUserArenaChunk must be true.
+// 注释：把内存转换成slice
 //
 //go:nosplit
 func (span *mspan) heapBits() []uintptr {
@@ -577,12 +586,13 @@ func (span *mspan) heapBits() []uintptr {
 	// Nearly every span with heap bits is exactly one page in size. Arenas are the only exception.
 	if span.npages == 1 {
 		// This will be inlined and constant-folded down.
-		return heapBitsSlice(span.base(), pageSize)
+		return heapBitsSlice(span.base(), pageSize) // 把内存转换成slice
 	}
-	return heapBitsSlice(span.base(), span.npages*pageSize)
+	return heapBitsSlice(span.base(), span.npages*pageSize) // 把内存转换成slice
 }
 
 // Helper for constructing a slice for the span's heap bits.
+// 注释：把内存转换成slice
 //
 //go:nosplit
 func heapBitsSlice(spanBase, spanSize uintptr) []uintptr {
