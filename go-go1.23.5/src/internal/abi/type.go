@@ -26,8 +26,14 @@ import (
 // 可以将其放在某个共享位置？）
 // 注释：运行时类型，在运行时表示一个Go类型。
 type Type struct {
-	Size_       uintptr
-	PtrBytes    uintptr // 如果等于0表示该类型无指针 // number of (prefix) bytes in the type that can contain pointers
+	// 对于基本类型（如 int, float64 等），Size_ 表示该类型本身占用的字节数。
+	// 对于复合类型（如结构体、数组等），Size_ 表示整个复合类型实例在内存中的总大小，包括其所有字段或元素所占用的空间。
+	Size_ uintptr // 类型大小，即该类型实例在内存中占用的字节数
+	//	如果 PtrBytes 等于 0，表示该类型不包含任何指针。
+	//	如果 PtrBytes 大于 0，则表示该类型的前 PtrBytes 字节范围内可能包含指针。
+	//	这个字段主要用于垃圾回收（GC）机制，帮助 GC 确定哪些部分的内存需要检查和追踪指针，从而有效地管理内存中的对象引用，避免内存泄漏。
+	//	并且不需要遍历整个对象的所有字节。
+	PtrBytes    uintptr // 包含指针的前缀字节（这些字节中可能包含指针，需要GC扫描） // number of (prefix) bytes in the type that can contain pointers
 	Hash        uint32  // hash of type; avoids computation in hash tables
 	TFlag       TFlag   // extra type information flags
 	Align_      uint8   // alignment of variable with this type

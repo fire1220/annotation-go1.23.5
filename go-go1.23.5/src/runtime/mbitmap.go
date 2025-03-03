@@ -648,6 +648,8 @@ func (span *mspan) heapBitsSmallForAddr(addr uintptr) uintptr {
 // Assumes dataSize is <= ptrBits*goarch.PtrSize. x must be a pointer into the span.
 // heapBitsInSpan(dataSize) must be true. dataSize must be >= typ.Size_.
 //
+// 注释：需要GC扫描的字节(扫描这些包含指针的字节)
+//
 //go:nosplit
 func (span *mspan) writeHeapBitsSmall(x, dataSize uintptr, typ *_type) (scanSize uintptr) {
 	// The objects here are always really small, so a single load is sufficient.
@@ -655,12 +657,12 @@ func (span *mspan) writeHeapBitsSmall(x, dataSize uintptr, typ *_type) (scanSize
 
 	// Create repetitions of the bitmap if we have a small array.
 	bits := span.elemsize / goarch.PtrSize
-	scanSize = typ.PtrBytes
+	scanSize = typ.PtrBytes // 包含指针的前缀字节（这些字节中可能包含指针，需要GC扫描）
 	src := src0
 	switch typ.Size_ {
-	case goarch.PtrSize:
+	case goarch.PtrSize: // 表示是指针类型
 		src = (1 << (dataSize / goarch.PtrSize)) - 1
-	default:
+	default: // 非指针类型
 		for i := typ.Size_; i < dataSize; i += typ.Size_ {
 			src |= src0 << (i / goarch.PtrSize)
 			scanSize += typ.Size_
@@ -729,6 +731,8 @@ func (span *mspan) writeHeapBitsSmall(x, dataSize uintptr, typ *_type) (scanSize
 //		记录 [x, x+dataSize) 区域内的数据为指定类型 typ。
 //		如果 dataSize < size，则 [x+dataSize, x+size) 区域被记录为非指针数据。
 //		函数仅在类型包含指针时调用，确保未被引用的对象在修改元数据时不会引发读写竞争。
+//
+// 注释：返回需要GC扫描的字节(扫描这些包含指针的字节)
 func heapSetType(x, dataSize uintptr, typ *_type, header **_type, span *mspan) (scanSize uintptr) {
 	const doubleCheck = false
 
@@ -739,7 +743,7 @@ func heapSetType(x, dataSize uintptr, typ *_type, header **_type, span *mspan) (
 		}
 		// Handle the case where we have no malloc header.
 		// 译：处理没有malloc头的情况。
-		scanSize = span.writeHeapBitsSmall(x, dataSize, typ)
+		scanSize = span.writeHeapBitsSmall(x, dataSize, typ) // 注释：需要GC扫描的字节(扫描这些包含指针的字节)
 	} else { // 头部类型信息,可用于存储运行时的类型信息
 		if typ.Kind_&abi.KindGCProg != 0 {
 			// Allocate space to unroll the gcprog. This space will consist of
