@@ -1122,6 +1122,9 @@ func (h *mheap) allocNeedsZero(base, npage uintptr) (needZero bool) {
 // the only place it is used now. In the future, this requirement
 // may be relaxed if its use is necessary elsewhere.
 //
+//	注释：函数尝试从 P 的本地缓存中分配一个 mspan 对象。
+//		如果当前没有 P 或者缓存为空，则返回 nil。否则，从缓存中取出最后一个 mspan 并返回
+//
 //go:systemstack
 func (h *mheap) tryAllocMSpan() *mspan {
 	pp := getg().m.p.ptr()
@@ -1131,8 +1134,8 @@ func (h *mheap) tryAllocMSpan() *mspan {
 		return nil
 	}
 	// Pull off the last entry in the cache.
-	s := pp.mspancache.buf[pp.mspancache.len-1]
-	pp.mspancache.len--
+	s := pp.mspancache.buf[pp.mspancache.len-1] // 获取最后一个 mspan
+	pp.mspancache.len--                         // 缓存长度(mspan个数)减一
 	return s
 }
 
@@ -1234,22 +1237,22 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 	// it if we need to provide a physical page aligned stack allocation.
 	// 译：如果分配足够小，尝试使用页缓存！
 	//	  页缓存不支持对齐分配，因此如果我们需要提供物理页面对齐的堆栈分配，则不能使用它
-	pp := gp.m.p.ptr()
+	pp := gp.m.p.ptr() // 获取当前P
 	if !needPhysPageAlign && pp != nil && npages < pageCachePages/4 {
-		c := &pp.pcache
+		c := &pp.pcache // 获取当前P的页缓存
 
 		// If the cache is empty, refill it.
-		if c.empty() {
+		if c.empty() { // 如果页缓存为空，则重新填充
 			lock(&h.lock)
-			*c = h.pages.allocToCache()
+			*c = h.pages.allocToCache() // 重新填充页缓存到P处理器里
 			unlock(&h.lock)
 		}
 
 		// Try to allocate from the cache.
-		base, scav = c.alloc(npages)
-		if base != 0 {
-			s = h.tryAllocMSpan()
-			if s != nil {
+		base, scav = c.alloc(npages) // 再次到P处理器里的页面缓存中获取内存
+		if base != 0 {               // 如果获取到内存
+			s = h.tryAllocMSpan() // 函数尝试从 P 的本地缓存中分配一个 mspan 对象。
+			if s != nil {         // 如果找到了则跳到HaveSpan处继续执行
 				goto HaveSpan
 			}
 			// We have a base but no mspan, so we need

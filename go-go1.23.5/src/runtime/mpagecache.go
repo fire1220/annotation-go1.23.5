@@ -123,6 +123,8 @@ func (c *pageCache) flush(p *pageAlloc) {
 //
 // Must run on the system stack because p.mheapLock must be held.
 //
+// 注释：重新填充页缓存到P处理器里
+//
 //go:systemstack
 func (p *pageAlloc) allocToCache() pageCache {
 	assertLockHeld(p.mheapLock)
