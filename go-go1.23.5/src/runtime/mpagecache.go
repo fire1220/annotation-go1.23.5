@@ -9,21 +9,23 @@ import (
 	"unsafe"
 )
 
-const pageCachePages = 8 * unsafe.Sizeof(pageCache{}.cache)
+const pageCachePages = 8 * unsafe.Sizeof(pageCache{}.cache) // 每个分配器缓存的页面大小
 
 // pageCache represents a per-p cache of pages the allocator can
 // allocate from without a lock. More specifically, it represents
 // a pageCachePages*pageSize chunk of memory with 0 or more free
 // pages in it.
+// 每个P处理器缓存的页面
 type pageCache struct {
-	base  uintptr // base address of the chunk
-	cache uint64  // 64-bit bitmap representing free pages (1 means free)
-	scav  uint64  // 64-bit bitmap representing scavenged pages (1 means scavenged)
+	base  uintptr // 内存块的基地址 // base address of the chunk
+	cache uint64  // 64 位的位图，表示空闲页面（1 表示空闲） // 64-bit bitmap representing free pages (1 means free)
+	scav  uint64  // 64 位的位图，表示已回收的页面（1 表示已回收） // 64-bit bitmap representing scavenged pages (1 means scavenged)
 }
 
 // empty reports whether the page cache has no free pages.
+// 缓存是否为空(无空闲页面)
 func (c *pageCache) empty() bool {
-	return c.cache == 0
+	return c.cache == 0 // 缓存是否为空(无空闲页面)
 }
 
 // alloc allocates npages from the page cache and is the main entry

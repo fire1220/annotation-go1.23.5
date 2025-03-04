@@ -971,11 +971,11 @@ func (h *mheap) reclaimChunk(arenas []arenaIdx, pageIdx, n uintptr) uintptr {
 
 // spanAllocType represents the type of allocation to make, or
 // the type of allocation to be freed.
-type spanAllocType uint8
+type spanAllocType uint8 // 进行、释放的分配类型
 
 const (
 	spanAllocHeap          spanAllocType = iota // heap span
-	spanAllocStack                              // stack span
+	spanAllocStack                              // 栈分配 //  stack span
 	spanAllocPtrScalarBits                      // unrolled GC prog bitmap span
 	spanAllocWorkBuf                            // work buf span
 )
@@ -1225,13 +1225,15 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 	//	这里的needPhysPageAlign变量用于标识是否需要物理页面对齐的栈分配，它基于三个条件：
 	//    1.physPageAlignedStacks：一个布尔值，表示是否启用了物理页面对齐的栈分配。
 	//    2.typ == spanAllocStack：表示当前分配的类型是否为栈（spanAllocStack类型）。
-	//    3.pageSize < physPageSize：表示当前页面大小是否小于物理页面大小。
+	//    3.pageSize < physPageSize：表示当前页面大小是否小于操作系统物理页面大小。
 	//	只有当这三个条件同时满足时，needPhysPageAlign才会被设置为true，表示需要进行物理页面对齐的栈分配。
 	needPhysPageAlign := physPageAlignedStacks && typ == spanAllocStack && pageSize < physPageSize
 
 	// If the allocation is small enough, try the page cache!
 	// The page cache does not support aligned allocations, so we cannot use
 	// it if we need to provide a physical page aligned stack allocation.
+	// 译：如果分配足够小，尝试使用页缓存！
+	//	  页缓存不支持对齐分配，因此如果我们需要提供物理页面对齐的堆栈分配，则不能使用它
 	pp := gp.m.p.ptr()
 	if !needPhysPageAlign && pp != nil && npages < pageCachePages/4 {
 		c := &pp.pcache

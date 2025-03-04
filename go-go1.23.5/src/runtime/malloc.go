@@ -351,7 +351,7 @@ const (
 //
 // This must be set by the OS init code (typically in osinit) before
 // mallocinit.
-var physPageSize uintptr
+var physPageSize uintptr // 操作系统物理页面, 这是操作系统和硬件约定的一个基本单位，所有内存分配和映射操作都必须以这个大小的倍数进行
 
 // physHugePageSize is the size in bytes of the OS's default physical huge
 // page size whose allocation is opaque to the application. It is assumed
