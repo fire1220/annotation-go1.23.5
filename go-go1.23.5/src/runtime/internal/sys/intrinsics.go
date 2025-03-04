@@ -66,6 +66,12 @@ func TrailingZeros64(x uint64) int {
 	// find by how many bits it was shifted by looking at which six bit
 	// substring ended up at the top of the word.
 	// (Knuth, volume 4, section 7.3.1)
+	//
+	// 译：如果 popcount（计算二进制中1的个数）操作足够快，可以用 return popcount(^x & (x - 1)) 替换下面的代码。
+	// x & -x 的结果会保留单词中最右边的位为1，其余位为0。假设该位的索引为 k。由于只有一个位被设置为1，其值等于 2 的 k 次方。
+	// 将一个数乘以 2 的幂等价于左移操作，在这种情况下是左移 k 位。de Bruijn 常量（64位）的特点是所有连续的6位子串都是唯一的。
+	// 因此，如果我们对该常量进行左移操作，可以通过查看最终位于单词顶部的6位子串来确定它被左移了多少位。
+	// （参考：Knuth，《计算机程序设计艺术》第4卷，第7.3.1节）
 	return int(deBruijn64tab[(x&-x)*deBruijn64>>(64-6)])
 }
 
