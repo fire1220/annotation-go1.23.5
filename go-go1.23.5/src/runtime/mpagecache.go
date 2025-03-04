@@ -61,16 +61,16 @@ func (c *pageCache) alloc(npages uintptr) (uintptr, uintptr) {
 // allocated region in bytes.
 //
 //	注释：在p的缓存中快速分配多个页的内存
-//		返回值为base地址和已回收内存的大小
+//		返回值为base地址和已回收(空闲)内存的大小
 func (c *pageCache) allocN(npages uintptr) (uintptr, uintptr) {
 	i := findBitRange64(c.cache, uint(npages)) // 查找第一个连续npages个1的起始位置,没找到返回64
 	if i >= 64 {                               // 表示没有连续的npages个1
 		return 0, 0
 	}
 	mask := ((uint64(1) << npages) - 1) << i
-	scav := sys.OnesCount64(c.scav & mask)
-	c.cache &^= mask // mark in-use bits
-	c.scav &^= mask  // clear scavenged bits
+	scav := sys.OnesCount64(c.scav & mask) // 1的个数(1表示已回收（空闲）)
+	c.cache &^= mask                       // 清除已使用的缓存 // mark in-use bits
+	c.scav &^= mask                        // 把已使用的内存标记成未清理 // clear scavenged bits
 	return c.base + uintptr(i*pageSize), uintptr(scav) * pageSize
 }
 
