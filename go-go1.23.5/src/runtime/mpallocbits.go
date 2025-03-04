@@ -381,6 +381,14 @@ func (b *pallocBits) allocPages64(i uint, alloc uint64) {
 // n consecutive 1 bits. If no consecutive set of 1 bits of
 // size n may be found in c, then it returns an integer >= 64.
 // n must be > 0.
+//
+//	注释：在一个64位无符号整数（c）中查找第一个连续n个1的起始位置。
+//		如果找不到这样的序列，则返回64。
+//		第二个入参 n 表示要查找的连续 1 的数量
+//		具体步骤如下：
+//		1.初始化 p 和 k，p 表示要移除的 1 的数量，k 表示当前最小的 0 运行宽度。
+//		2.使用循环逐步缩小 1 的运行长度，直到找到剩余的第一个 1。
+//		3.返回第一个 1 的位置。
 func findBitRange64(c uint64, n uint) uint {
 	// This implementation is based on shrinking the length of
 	// runs of contiguous 1 bits. We remove the top n-1 1 bits
