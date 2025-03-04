@@ -120,10 +120,12 @@ const m1 = 0x3333333333333333 // 00110011 ...
 const m2 = 0x0f0f0f0f0f0f0f0f // 00001111 ...
 
 // OnesCount64 returns the number of one bits ("population count") in x.
+// 统计二进制1的个数（返回x中的1的个数（"人口计数"）)
 func OnesCount64(x uint64) int {
 	// Implementation: Parallel summing of adjacent bits.
 	// See "Hacker's Delight", Chap. 5: Counting Bits.
 	// The following pattern shows the general approach:
+	// 译：实现：并行累加相邻位。参见《Hacker's Delight》第5章：计位。
 	//
 	//   x = x>>1&(m0&m) + x&(m0&m)
 	//   x = x>>2&(m1&m) + x&(m1&m)
@@ -140,6 +142,10 @@ func OnesCount64(x uint64) int {
 	// Per "Hacker's Delight", the first line can be simplified
 	// more, but it saves at best one instruction, so we leave
 	// it alone for clarity.
+	// 译：当没有危险导致一个字段的和会进位到下一个字段时，可以省略掩码（& 操作）：
+	//	  由于结果不会超过 64，8 位已经足够，因此可以忽略对于 8 位及以上的移位掩码。
+	// 根据《Hacker's Delight》，第一行可以进一步简化，但这最多只能节省一条指令，因此我们为了清晰起见保持原样。
+
 	const m = 1<<64 - 1
 	x = x>>1&(m0&m) + x&(m0&m)
 	x = x>>2&(m1&m) + x&(m1&m)
