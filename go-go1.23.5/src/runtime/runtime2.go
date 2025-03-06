@@ -567,13 +567,17 @@ type m struct {
 	_       uint32 // align next field to 8 bytes
 
 	// Fields not known to debuggers.
-	procid          uint64            // for debuggers, but offset not hard-coded
-	gsignal         *g                // 专门用于处理信号的g // signal-handling g
-	goSigStack      gsignalStack      // Go-allocated signal handling stack
-	sigmask         sigset            // storage for saved signal mask
-	tls             [tlsSlots]uintptr // thread-local storage (for x86 extern register)
-	mstartfn        func()
-	curg            *g       // current running goroutine
+	procid     uint64            // for debuggers, but offset not hard-coded
+	gsignal    *g                // 专门用于处理信号的g // signal-handling g
+	goSigStack gsignalStack      // Go-allocated signal handling stack
+	sigmask    sigset            // storage for saved signal mask
+	tls        [tlsSlots]uintptr // thread-local storage (for x86 extern register)
+	mstartfn   func()
+	//	curg 值情况：(就是TLS中获取的)
+	//		1.用户g：大多数情况下，curg 指向当前线程（M）上正在执行的普通 goroutine。
+	//		2.g0：当线程进入调度阶段或执行系统调用时，curg 会切换到 g0。因此，在这些情况下，curg 可以是指向 g0 的指针。
+	//		3.gsignal：在处理信号（如 SIGPROF）时，curg 会切换到 gsignal。
+	curg            *g       // 当前运行的G // current running goroutine
 	caughtsig       guintptr // goroutine running during fatal signal
 	p               puintptr // attached p for executing go code (nil if not executing go code)
 	nextp           puintptr

@@ -31,8 +31,20 @@ func add(p unsafe.Pointer, x uintptr) unsafe.Pointer {
 // 译：getg 返回指向当前 goroutine (g) 的指针。
 // 编译器会将对此函数的调用重写为直接从线程本地存储 (TLS) 或专用寄存器中获取 g 的指令。
 //
+//	TLS 存储：Go 运行时使用 TLS 来存储每个线程（M）的上下文信息，包括当前正在运行的 goroutine (curg)。
+//			 当需要访问 curg 时，Go 编译器会将对 getg() 函数的调用重写为直接从 TLS 中读取 curg 的指令。
+//	专用寄存器：在某些架构上，Go 可能会使用专用寄存器来存储 curg，以提高性能。在这种情况下，curg 的值也是从该寄存器中读取的。
+//
 //	注释：TLS用于存储当前G的指针
 //		TLS(线程本地存储Thread Local Storage)
+//
+//	getg 返回情况：
+//		1.调度阶段：getg() 返回的是 g0，因为调度逻辑运行在 g0 上下文中
+//		2.非调度阶段：getg() 返回的是当前正在运行的用户 goroutine
+//		3.信号处理期间: getg()返回gsignal的指针.
+//	gsignal：这是另一个特殊的 goroutine，用于处理信号（如 SIGPROF）。当 Go 程序需要处理信号时，线程会切换到 gsignal 上下文。
+//
+// 总结：getg就是拿TLS中的g指针,TLS保存的是当前执行的G
 func getg() *g // 当前 goroutine (g) 的指针。
 
 // mcall switches from the g to the g0 stack and invokes fn(g),
