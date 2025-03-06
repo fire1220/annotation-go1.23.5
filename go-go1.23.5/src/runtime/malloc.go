@@ -1044,11 +1044,11 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	assistG := deductAssistCredit(size)
 
 	// Set mp.mallocing to keep from being preempted by GC.
-	mp := acquirem()
+	mp := acquirem() // 获取当前线程的m
 	if mp.mallocing != 0 {
 		throw("malloc deadlock")
 	}
-	if mp.gsignal == getg() {
+	if mp.gsignal == getg() { // gsignal是专门用处理信号的G，如果当前G是gsignal，则抛出异常
 		throw("malloc during signal")
 	}
 	mp.mallocing = 1 // 标记开发分配

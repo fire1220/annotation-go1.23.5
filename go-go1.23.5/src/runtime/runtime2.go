@@ -549,6 +549,7 @@ const (
 	freeMWait  = 2 // M still in use.
 )
 
+// M 线程
 type m struct {
 	g0      *g     // goroutine with scheduling stack
 	morebuf gobuf  // gobuf arg to morestack
@@ -557,7 +558,7 @@ type m struct {
 
 	// Fields not known to debuggers.
 	procid          uint64            // for debuggers, but offset not hard-coded
-	gsignal         *g                // signal-handling g
+	gsignal         *g                // 专门用于处理信号的g // signal-handling g
 	goSigStack      gsignalStack      // Go-allocated signal handling stack
 	sigmask         sigset            // storage for saved signal mask
 	tls             [tlsSlots]uintptr // thread-local storage (for x86 extern register)
@@ -647,6 +648,7 @@ type m struct {
 	locksHeld    [10]heldLockInfo
 }
 
+// 逻辑P处理器
 type p struct {
 	id          int32
 	status      uint32 // one of pidle/prunning/...
