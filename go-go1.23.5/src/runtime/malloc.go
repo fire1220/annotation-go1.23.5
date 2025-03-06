@@ -947,7 +947,7 @@ func (c *mcache) nextFree(spc spanClass) (v gclinkptr, s *mspan, shouldhelpgc bo
 			println("runtime: s.allocCount=", s.allocCount, "s.nelems=", s.nelems)
 			throw("s.allocCount != s.nelems && freeIndex == s.nelems")
 		}
-		c.refill(spc) // 重新装填span，到mheap中获取span并装填到mcentral中
+		c.refill(spc) // 重新装填span，把mcentral(或mheap)装填到mcache中
 		shouldhelpgc = true
 		s = c.alloc[spc]
 

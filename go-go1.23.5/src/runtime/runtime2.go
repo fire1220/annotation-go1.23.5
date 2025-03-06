@@ -671,8 +671,8 @@ type p struct {
 	syscalltick uint32     // incremented on every system call
 	sysmontick  sysmontick // last tick observed by sysmon
 	m           muintptr   // back-link to associated m (nil if idle)
-	mcache      *mcache
-	pcache      pageCache // P处理器的内存页缓存
+	mcache      *mcache    // 内存缓存，如果没有则到mcentral中获取，如果还没有回到mheap中拿
+	pcache      pageCache  // P处理器的内存页缓存
 	raceprocctx uintptr
 
 	deferpool    []*_defer // pool of available defer structs (see panic.go)
