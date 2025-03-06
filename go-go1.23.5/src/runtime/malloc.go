@@ -1347,10 +1347,10 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 // Returns the G for which the assist credit was accounted.
 func deductAssistCredit(size uintptr) *g {
 	var assistG *g
-	if gcBlackenEnabled != 0 {
+	if gcBlackenEnabled != 0 { // 允许mutator协助和后台标记线程对对象进行染黑操作
 		// Charge the current user G for this allocation.
-		assistG = getg()
-		if assistG.m.curg != nil {
+		assistG = getg()           // 获取当前G
+		if assistG.m.curg != nil { // 如果当前G不是后台线程
 			assistG = assistG.m.curg
 		}
 		// Charge the allocation against the G. We'll account

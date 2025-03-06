@@ -236,7 +236,10 @@ var writeBarrier struct {
 // gcBlackenEnabled is 1 if mutator assists and background mark
 // workers are allowed to blacken objects. This must only be set when
 // gcphase == _GCmark.
-var gcBlackenEnabled uint32
+//
+//	译：如果mutator协助和后台标记工作线程被允许对对象进行染黑操作，则 gcBlackenEnabled 为 1。
+//		该变量只能在 gcphase == _GCmark（即垃圾回收的标记阶段）时设置。
+var gcBlackenEnabled uint32 // 1表示允许mutator协助和后台标记工作线程对对象进行染黑操作
 
 const (
 	_GCoff             = iota // GC not running; sweeping in background, write barrier disabled

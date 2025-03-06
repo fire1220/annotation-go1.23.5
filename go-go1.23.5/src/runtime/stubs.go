@@ -28,7 +28,12 @@ func add(p unsafe.Pointer, x uintptr) unsafe.Pointer {
 // getg returns the pointer to the current g.
 // The compiler rewrites calls to this function into instructions
 // that fetch the g directly (from TLS or from the dedicated register).
-func getg() *g
+// 译：getg 返回指向当前 goroutine (g) 的指针。
+// 编译器会将对此函数的调用重写为直接从线程本地存储 (TLS) 或专用寄存器中获取 g 的指令。
+//
+//	注释：TLS用于存储当前G的指针
+//		TLS(线程本地存储Thread Local Storage)
+func getg() *g // 当前 goroutine (g) 的指针。
 
 // mcall switches from the g to the g0 stack and invokes fn(g),
 // where g is the goroutine that made the call.
