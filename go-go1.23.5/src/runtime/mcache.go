@@ -190,7 +190,7 @@ func (c *mcache) refill(spc spanClass) {
 	}
 
 	// Get a new cached span from the central lists.
-	s = mheap_.central[spc].mcentral.cacheSpan() // 从mheap中拿出一个跨度类
+	s = mheap_.central[spc].mcentral.cacheSpan() // 从mcentral或mheap中拿出一个跨度类
 	if s == nil {
 		throw("out of memory")
 	}
