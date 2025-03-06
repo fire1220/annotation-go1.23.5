@@ -528,6 +528,17 @@ type g struct {
 	// scan work. We track this in bytes to make it fast to update
 	// and check for debt in the malloc hot path. The assist ratio
 	// determines how this corresponds to scan work debt.
+	// 	译：每个 Goroutine 的 GC 状态
+	// 		gcAssistBytes 表示当前 Goroutine (G) 的 GC 辅助信用，以分配的字节数表示。
+	// 		如果该值为正值，则表示该 Goroutine 可以在不协助 GC 的情况下分配 gcAssistBytes 字节的内存。
+	// 		如果该值为负值，则表示该 Goroutine 需要通过执行扫描工作来纠正这一负值。
+	// 		我们以字节为单位跟踪此值，以便在内存分配的热点路径中快速更新和检查是否存在债务。
+	// 		辅助比率决定了该值与扫描工作债务之间的对应关系。
+	//
+	// 注释：当前 Goroutine (G) 的 GC 辅助信用，以分配的字节数表示。
+	// 		正值表示 G 可以在不协助 GC 的情况下分配 gcAssistBytes 字节；
+	// 		负值表示 G 需要通过执行扫描工作来纠正。
+	// 		该值以字节为单位进行跟踪，用于快速更新和检查内存分配路径中的债务，其与扫描工作债务的关系由辅助比率决定。
 	gcAssistBytes int64
 }
 
