@@ -61,6 +61,7 @@ func (c *mcentral) partialUnswept(sweepgen uint32) *spanSet {
 
 // partialSwept returns the spanSet which holds partially-filled
 // swept spans for this sweepgen.
+// 注释：【有可用空间】【已清理】中拿span
 func (c *mcentral) partialSwept(sweepgen uint32) *spanSet {
 	return &c.partial[sweepgen/2%2]
 }
@@ -78,6 +79,7 @@ func (c *mcentral) fullSwept(sweepgen uint32) *spanSet {
 }
 
 // Allocate a span to use in an mcache.
+// 注释：从mcentral或mheap中拿出一个跨度类
 func (c *mcentral) cacheSpan() *mspan {
 	// Deduct credit for this span allocation and sweep if necessary.
 	spanBytes := uintptr(class_to_allocnpages[c.spanclass.sizeclass()]) * _PageSize
@@ -110,7 +112,7 @@ func (c *mcentral) cacheSpan() *mspan {
 
 	// Try partial swept spans first.
 	sg := mheap_.sweepgen
-	if s = c.partialSwept(sg).pop(); s != nil {
+	if s = c.partialSwept(sg).pop(); s != nil { // 【有可用空间】【已清理】中拿span
 		goto havespan
 	}
 
@@ -118,7 +120,7 @@ func (c *mcentral) cacheSpan() *mspan {
 	if sl.valid {
 		// Now try partial unswept spans.
 		for ; spanBudget >= 0; spanBudget-- {
-			s = c.partialUnswept(sg).pop()
+			s = c.partialUnswept(sg).pop() // 【有可用空间】【未清理】中拿span
 			if s == nil {
 				break
 			}
@@ -138,7 +140,7 @@ func (c *mcentral) cacheSpan() *mspan {
 		// Now try full unswept spans, sweeping them and putting them into the
 		// right list if we fail to get a span.
 		for ; spanBudget >= 0; spanBudget-- {
-			s = c.fullUnswept(sg).pop()
+			s = c.fullUnswept(sg).pop() // 【无可用空间】【未清理】中拿span
 			if s == nil {
 				break
 			}
@@ -153,7 +155,7 @@ func (c *mcentral) cacheSpan() *mspan {
 					goto havespan
 				}
 				// Add it to the swept list, because sweeping didn't give us any free space.
-				c.fullSwept(sg).push(s.mspan)
+				c.fullSwept(sg).push(s.mspan) // 【无可用空间】【已清理】中放入span
 			}
 			// See comment for partial unswept spans.
 		}
@@ -167,7 +169,7 @@ func (c *mcentral) cacheSpan() *mspan {
 	}
 
 	// We failed to get a span from the mcentral so get one from mheap.
-	s = c.grow()
+	s = c.grow() // 从mheap中拿出一个跨度类
 	if s == nil {
 		return nil
 	}
