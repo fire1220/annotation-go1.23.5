@@ -250,6 +250,7 @@ func (c *mcentral) uncacheSpan(s *mspan) {
 }
 
 // grow allocates a new empty span from the heap and initializes it for c's size class.
+// 注释：从mheap中拿出一个跨度类
 func (c *mcentral) grow() *mspan {
 	npages := uintptr(class_to_allocnpages[c.spanclass.sizeclass()])
 	size := uintptr(class_to_size[c.spanclass.sizeclass()])
