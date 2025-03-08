@@ -56,7 +56,7 @@ const (
 	// The size of a bitmap chunk, i.e. the amount of bits (that is, pages) to consider
 	// in the bitmap at once.
 	pallocChunkPages    = 1 << logPallocChunkPages
-	pallocChunkBytes    = pallocChunkPages * pageSize
+	pallocChunkBytes    = pallocChunkPages * pageSize // P中分配的快大小（arena的块大小） 512*8192 = 512*8KB
 	logPallocChunkPages = 9
 	logPallocChunkBytes = logPallocChunkPages + pageShift
 
@@ -99,15 +99,17 @@ func maxSearchAddr() offAddr { return maxOffAddr }
 // Represents an index into the leaf level of the radix tree.
 // Similar to arenaIndex, except instead of arenas, it divides the address
 // space into chunks.
-type chunkIdx uint
+type chunkIdx uint // 页中块的索引
 
 // chunkIndex returns the global index of the palloc chunk containing the
 // pointer p.
+// 注释：根据地址获取页中块索引
 func chunkIndex(p uintptr) chunkIdx {
-	return chunkIdx((p - arenaBaseOffset) / pallocChunkBytes)
+	return chunkIdx((p - arenaBaseOffset) / pallocChunkBytes) // 计算出chunkIdx=(当前指针-基地址)/块大小
 }
 
 // chunkBase returns the base address of the palloc chunk at index ci.
+// 注释：根据块索引获取页中块的基地址
 func chunkBase(ci chunkIdx) uintptr {
 	return uintptr(ci)*pallocChunkBytes + arenaBaseOffset
 }
@@ -252,7 +254,7 @@ type pageAlloc struct {
 	// which pageAlloc knows about. It assumes
 	// chunks in the range [start, end) are
 	// currently ready to use.
-	start, end chunkIdx
+	start, end chunkIdx // 页缓存中开始块和结束块的索引
 
 	// inUse is a slice of ranges of address space which are
 	// known by the page allocator to be currently in-use (passed

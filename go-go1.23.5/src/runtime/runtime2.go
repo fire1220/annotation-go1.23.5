@@ -579,7 +579,7 @@ type m struct {
 	//		3.gsignal：在处理信号（如 SIGPROF）时，curg 会切换到 gsignal。
 	curg            *g       // 当前运行的G // current running goroutine
 	caughtsig       guintptr // goroutine running during fatal signal
-	p               puintptr // attached p for executing go code (nil if not executing go code)
+	p               puintptr // M绑定的P，如果没有则未nil // attached p for executing go code (nil if not executing go code)
 	nextp           puintptr
 	oldp            puintptr // the p that was attached before executing a syscall
 	id              int64

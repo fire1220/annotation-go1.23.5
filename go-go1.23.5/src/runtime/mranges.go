@@ -120,10 +120,14 @@ var (
 // offAddr represents an address in a contiguous view
 // of the address space on systems where the address space is
 // segmented. On other systems, it's just a normal address.
+// 译：offAddr 表示在分段地址空间的系统中连续视图中的一个地址。
+// 在其他系统中，它只是一个普通的地址。
 type offAddr struct {
 	// a is just the virtual address, but should never be used
 	// directly. Call addr() to get this value instead.
-	a uintptr
+	// 译：a 是虚拟地址，但不应直接使用。
+	// 调用addr()方法来获取这个值。
+	a uintptr // 虚地址
 }
 
 // add adds a uintptr offset to the offAddr.
@@ -162,6 +166,7 @@ func (l1 offAddr) equal(l2 offAddr) bool {
 }
 
 // addr returns the virtual address for this offset address.
+// 注释：返回虚地址
 func (l offAddr) addr() uintptr {
 	return l.a
 }
