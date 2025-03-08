@@ -203,6 +203,14 @@ type pageAlloc struct {
 	//
 	// We may still get segmentation faults < len since some of that
 	// memory may not be committed yet.
+	//
+	// 译：基数树（Radix tree）用于存储摘要信息。
+	// 每个切片的容量（cap）表示整个内存预留。
+	// 每个切片的长度（len）反映分配器在该层级上已知的最大映射堆地址。
+	// 每个摘要层级的后备存储在初始化时预留，可能在增长时提交（对于小地址空间，可能会在初始化时提交所有内存）。
+	// 保持 len <= cap 的目的是为了强制执行切片顶端的边界检查，这样我们可以得到一个更友好的越界错误，而不是未知的运行时段错误。
+	// 要迭代摘要层级，使用 inUse 来确定当前可用的范围。否则可能会尝试访问仅预留但未提交的内存，这可能导致硬故障。
+	// 我们仍然可能在 < len 的情况下遇到段错误，因为部分内存可能尚未提交。
 	summary [summaryLevels][]pallocSum
 
 	// chunks is a slice of bitmap chunks.

@@ -12,7 +12,7 @@ import (
 
 const (
 	// The number of levels in the radix tree.
-	summaryLevels = 5
+	summaryLevels = 5 // 基数树的层数为5
 
 	// Constants for testing.
 	pageAlloc32Bit = 0
