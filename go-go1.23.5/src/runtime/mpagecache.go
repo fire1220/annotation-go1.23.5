@@ -131,11 +131,11 @@ func (p *pageAlloc) allocToCache() pageCache {
 
 	// If the searchAddr refers to a region which has a higher address than
 	// any known chunk, then we know we're out of memory.
-	if chunkIndex(p.searchAddr.addr()) >= p.end {
+	if chunkIndex(p.searchAddr.addr()) >= p.end { // 判断页里块的索引是否大于等于p的缓存块结束下标，如果true表示缓存中没有内存了
 		return pageCache{}
 	}
 	c := pageCache{}
-	ci := chunkIndex(p.searchAddr.addr()) // chunk index
+	ci := chunkIndex(p.searchAddr.addr()) // 页里块的索引 // chunk index
 	var chunk *pallocData
 	if p.summary[len(p.summary)-1][ci] != 0 {
 		// Fast path: there's free pages at or near the searchAddr address.

@@ -55,7 +55,7 @@ import (
 const (
 	// The size of a bitmap chunk, i.e. the amount of bits (that is, pages) to consider
 	// in the bitmap at once.
-	pallocChunkPages    = 1 << logPallocChunkPages
+	pallocChunkPages    = 1 << logPallocChunkPages    // 512
 	pallocChunkBytes    = pallocChunkPages * pageSize // P中分配的快大小（arena的块大小） 512*8192 = 512*8KB
 	logPallocChunkPages = 9
 	logPallocChunkBytes = logPallocChunkPages + pageShift
@@ -179,6 +179,8 @@ func blockAlignSummaryRange(level int, lo, hi int) (int, int) {
 	return int(alignDown(uintptr(lo), e)), int(alignUp(uintptr(hi), e))
 }
 
+// 注释：内存页分配器
+// 每个页管理多个快，是个二维管理的快
 type pageAlloc struct {
 	// Radix tree of summaries.
 	//
@@ -238,7 +240,7 @@ type pageAlloc struct {
 	// TODO(mknyszek): Consider changing the definition of the bitmap
 	// such that 1 means free and 0 means in-use so that summaries and
 	// the bitmaps align better on zero-values.
-	chunks [1 << pallocChunksL1Bits]*[1 << pallocChunksL2Bits]pallocData
+	chunks [1 << pallocChunksL1Bits]*[1 << pallocChunksL2Bits]pallocData // 管理的所以块（二维的图）
 
 	// The address to start an allocation search with. It must never
 	// point to any memory that is not contained in inUse, i.e.
@@ -248,7 +250,7 @@ type pageAlloc struct {
 	//
 	// We guarantee that all valid heap addresses below this value
 	// are allocated and not worth searching.
-	searchAddr offAddr
+	searchAddr offAddr // 开始分配内存的地址,内存是从高地址开始分配内存
 
 	// start and end represent the chunk indices
 	// which pageAlloc knows about. It assumes

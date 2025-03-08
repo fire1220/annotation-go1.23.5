@@ -127,7 +127,7 @@ type offAddr struct {
 	// directly. Call addr() to get this value instead.
 	// 译：a 是虚拟地址，但不应直接使用。
 	// 调用addr()方法来获取这个值。
-	a uintptr // 虚地址
+	a uintptr // 虚地址(内存是从高地址开始分配的)
 }
 
 // add adds a uintptr offset to the offAddr.
