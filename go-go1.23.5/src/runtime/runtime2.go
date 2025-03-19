@@ -710,7 +710,7 @@ type p struct {
 	sudogbuf   [128]*sudog
 
 	// Cache of mspan objects from the heap.
-	// 缓存堆内存span对象
+	// span对象的缓存
 	// msppan空对象，取出后需要初始化
 	mspancache struct { // P处理器中存放的span对象缓存
 		// We need an explicit length here because this field is used
