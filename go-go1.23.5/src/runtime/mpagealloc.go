@@ -656,6 +656,12 @@ func (p *pageAlloc) findMappedAddr(addr offAddr) offAddr {
 // searchAddr returned is invalid and must be ignored.
 //
 // p.mheapLock must be held.
+//
+//	该函数的功能：
+//		1.在内存地址空间中查找第一个连续的空闲区域，大小为 npages，并返回该区域的基地址。
+//		2.使用 p.searchAddr 优化搜索范围，假设低于 chunkIndex(p.searchAddr) 的所有内存块都不包含空闲内存。
+//		3.计算并返回一个新的候选 p.searchAddr，用于进一步优化后续搜索。
+//		4.如果未找到符合条件的内存区域，则返回基地址为 0，此时候选 p.searchAddr 无效。
 func (p *pageAlloc) find(npages uintptr) (uintptr, offAddr) {
 	assertLockHeld(p.mheapLock)
 
