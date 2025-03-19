@@ -711,6 +711,7 @@ type p struct {
 
 	// Cache of mspan objects from the heap.
 	// 缓存堆内存span对象
+	// msppan空对象，取出后需要初始化
 	mspancache struct { // P处理器中存放的span对象缓存
 		// We need an explicit length here because this field is used
 		// in allocation codepaths where write barriers are not allowed,
@@ -718,7 +719,7 @@ type p struct {
 		// slice updates is tricky, more so than just managing the length
 		// ourselves.
 		len int         // mspan对象的个数
-		buf [128]*mspan // mspan对象缓存，每次取最后一个（buf[len-1]并且总个数递减len--）
+		buf [128]*mspan // (空对象，取出后需要初始化)mspan对象缓存，每次取最后一个（buf[len-1]并且总个数递减len--）
 	}
 
 	// Cache of a single pinner object to reduce allocations from repeated
