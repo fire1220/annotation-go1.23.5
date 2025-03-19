@@ -1226,11 +1226,11 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 	// size, we already manage to do this by default.
 	//	在某些平台上，我们需要提供物理页面对齐的栈内存分配。当页面大小小于物理页面大小时，默认情况下我们已经能够处理这种情况以实现物理页面对齐。
 	//	这里的needPhysPageAlign变量用于标识是否需要物理页面对齐的栈分配，它基于三个条件：
-	//    1.physPageAlignedStacks：一个布尔值，表示是否启用了物理页面对齐的栈分配。
-	//    2.typ == spanAllocStack：表示当前分配的类型是否为栈（spanAllocStack类型）。
-	//    3.pageSize < physPageSize：表示当前页面大小是否小于操作系统物理页面大小。
-	//	只有当这三个条件同时满足时，needPhysPageAlign才会被设置为true，表示需要进行物理页面对齐的栈分配。
-	needPhysPageAlign := physPageAlignedStacks && typ == spanAllocStack && pageSize < physPageSize
+	//    1.physPageAlignedStacks：(启用物理页对齐)一个布尔值，表示是否启用了物理页面对齐的栈分配。
+	//    2.typ == spanAllocStack：(栈分配)表示当前分配的类型是否为栈（spanAllocStack类型）。
+	//    3.pageSize < physPageSize：(小于物理页)表示当前页面大小是否小于操作系统物理页面大小。
+	//	（物理页面对齐）只有当这三个条件同时满足时，needPhysPageAlign才会被设置为true，表示需要进行物理页面对齐的栈分配。
+	needPhysPageAlign := physPageAlignedStacks && typ == spanAllocStack && pageSize < physPageSize // 物理页面对齐
 
 	// If the allocation is small enough, try the page cache!
 	// The page cache does not support aligned allocations, so we cannot use
@@ -1264,7 +1264,7 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 	// whole job done without the heap lock.
 	lock(&h.lock)
 
-	if needPhysPageAlign {
+	if needPhysPageAlign { // 需要物理页面对齐
 		// Overallocate by a physical page to allow for later alignment.
 		extraPages := physPageSize / pageSize
 
@@ -1276,20 +1276,20 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 		// Note that we skip updates to searchAddr here. It's OK if
 		// it's stale and higher than normal; it'll operate correctly,
 		// just come with a performance cost.
-		base, _ = h.pages.find(npages + extraPages)
-		if base == 0 {
+		base, _ = h.pages.find(npages + extraPages) // 尝试在内存中找到足够大的区域
+		if base == 0 {                              // 如果找不到，则尝试扩展堆内存 (h.grow)
 			var ok bool
-			growth, ok = h.grow(npages + extraPages)
+			growth, ok = h.grow(npages + extraPages) // 扩展堆内存 (h.grow)
 			if !ok {
 				unlock(&h.lock)
 				return nil
 			}
-			base, _ = h.pages.find(npages + extraPages)
+			base, _ = h.pages.find(npages + extraPages) // 扩展堆内存后再次尝试查找
 			if base == 0 {
 				throw("grew heap, but no adequate free space found")
 			}
 		}
-		base = alignUp(base, physPageSize)
+		base = alignUp(base, physPageSize) // 内存对齐
 		scav = h.pages.allocRange(base, npages)
 	}
 
