@@ -993,7 +993,7 @@ const (
 	// maxPackedValue is the maximum value that any of the three fields in
 	// the pallocSum may take on.
 	maxPackedValue    = 1 << logMaxPackedValue
-	logMaxPackedValue = logPallocChunkPages + (summaryLevels-1)*summaryLevelBits
+	logMaxPackedValue = logPallocChunkPages + (summaryLevels-1)*summaryLevelBits // 21
 
 	freeChunkSum = pallocSum(uint64(pallocChunkPages) |
 		uint64(pallocChunkPages<<logMaxPackedValue) |
@@ -1005,13 +1005,24 @@ const (
 // a bitmap and are thus counts, each of which may have a maximum value of
 // 2^21 - 1, or all three may be equal to 2^21. The latter case is represented
 // by just setting the 64th bit.
+//
+//	译：
+//		pallocSum 是一种打包的摘要类型，它将三个数字：start、max 和 end 打包成一个 8 字节的值。
+//		这些值是对位图的摘要，因此是计数值，每个值的最大值可能为 2^21 - 1，或者所有三个值都等于 2^21。
+//		后一种情况通过仅设置第 64 位来表示。
+//
+// pallocSum类型是基于 uint64 的一种紧凑摘要类型，用于将三个数值（start、max 和 end）打包成一个 8 字节的值。
+// 每个值的最大范围为 (2^{21} - 1)，或者所有三个值都等于 (2^{21})，此时通过设置第 64 位来表示特殊情况。
+// 函数 packPallocSum 用于将这三个值打包成一个 pallocSum 类型。
+// end(左21位), max(中间21位) , start(右21位)
 type pallocSum uint64
 
 // packPallocSum takes a start, max, and end value and produces a pallocSum.
 func packPallocSum(start, max, end uint) pallocSum {
-	if max == maxPackedValue {
+	if max == maxPackedValue { // 2^{21}
 		return pallocSum(uint64(1 << 63))
 	}
+	//  end(左21位), max(中间21位) , start(右21位)
 	return pallocSum((uint64(start) & (maxPackedValue - 1)) |
 		((uint64(max) & (maxPackedValue - 1)) << logMaxPackedValue) |
 		((uint64(end) & (maxPackedValue - 1)) << (2 * logMaxPackedValue)))
