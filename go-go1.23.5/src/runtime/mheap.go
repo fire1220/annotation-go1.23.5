@@ -1250,8 +1250,8 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 
 		// Try to allocate from the cache.
 		base, scav = c.alloc(npages) // 再次到P处理器里的页面缓存中获取内存
-		if base != 0 {               // 如果获取到内存
-			s = h.tryAllocMSpan() // 函数尝试从 P 的本地缓存中分配一个 mspan 对象。
+		if base != 0 {               // 如果获取到内存首地址
+			s = h.tryAllocMSpan() // 获取span对象；函数尝试从 P 的本地缓存中分配一个 mspan 对象。
 			if s != nil {         // 如果找到了则跳到HaveSpan处继续执行
 				goto HaveSpan
 			}
