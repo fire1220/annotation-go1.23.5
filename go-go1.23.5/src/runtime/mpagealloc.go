@@ -258,7 +258,7 @@ type pageAlloc struct {
 	//
 	// We guarantee that all valid heap addresses below this value
 	// are allocated and not worth searching.
-	searchAddr offAddr // 开始分配内存的地址,内存是从高地址开始分配内存
+	searchAddr offAddr // 开始分配内存的地址,内存是从高地址开始分配内存,在这个地址之后,内存是空闲的
 
 	// start and end represent the chunk indices
 	// which pageAlloc knows about. It assumes
