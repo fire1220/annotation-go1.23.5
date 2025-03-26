@@ -31,7 +31,7 @@ const (
 //
 // The sum of all the entries of levelBits should equal heapAddrBits.
 var levelBits = [summaryLevels]uint{
-	summaryL0Bits,
+	summaryL0Bits, // Linux64环境下：14
 	summaryLevelBits,
 	summaryLevelBits,
 	summaryLevelBits,

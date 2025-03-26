@@ -1061,7 +1061,7 @@ func (h *mheap) setSpans(base, npage uintptr, s *mspan) {
 func (h *mheap) allocNeedsZero(base, npage uintptr) (needZero bool) {
 	for npage > 0 {
 		ai := arenaIndex(base)
-		ha := h.arenas[ai.l1()][ai.l2()]
+		ha := h.arenas[ai.l1()][ai.l2()] // Linux平台是ha := h.arenas[0][base] 是个一维的数组
 
 		zeroedBase := atomic.Loaduintptr(&ha.zeroedBase)
 		arenaBase := base % heapArenaBytes

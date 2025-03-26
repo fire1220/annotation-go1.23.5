@@ -71,8 +71,13 @@ const (
 	// summaryL0Bits + (summaryLevels-1)*summaryLevelBits + logPallocChunkBytes = heapAddrBits
 	//
 	// summaryLevels is an architecture-dependent value defined in mpagealloc_*.go.
-	summaryLevelBits = 3
-	summaryL0Bits    = heapAddrBits - logPallocChunkBytes - (summaryLevels-1)*summaryLevelBits
+	//	译:
+	//	每层的基数位数。
+	//	选择值为3的原因是，使得我们在每层需要扫描的摘要块大小为64字节（2^3个摘要 * 每个摘要8字节），这接近许多系统的L1缓存行宽度。此外，值为3可以将4层树结构完美地映射到根级别21位的pallocBits摘要字段中。
+	//	以下公式解释了每个常量之间的关系： summaryL0Bits + (summaryLevels-1)*summaryLevelBits + logPallocChunkBytes = heapAddrBits
+	//	summaryLevels 是一个依赖于架构的值，在 mpagealloc_*.go 文件中定义。
+	summaryLevelBits = 3                                                                       // 表示每层radix树的位数
+	summaryL0Bits    = heapAddrBits - logPallocChunkBytes - (summaryLevels-1)*summaryLevelBits // Linux64环境下：48-22-(5-1)*3=14
 
 	// pallocChunksL2Bits is the number of bits of the chunk index number
 	// covered by the second level of the chunks map.
@@ -662,6 +667,9 @@ func (p *pageAlloc) findMappedAddr(addr offAddr) offAddr {
 //		2.使用 p.searchAddr 优化搜索范围，假设低于 chunkIndex(p.searchAddr) 的所有内存块都不包含空闲内存。
 //		3.计算并返回一个新的候选 p.searchAddr，用于进一步优化后续搜索。
 //		4.如果未找到符合条件的内存区域，则返回基地址为 0，此时候选 p.searchAddr 无效。
+//	返回值：
+//		1.虚地址base（该地址用来计算h.arenas[ai.l1()][ai.l2()]的两个下标l1和l2，在非Windows64平台l1=0,l2=base）
+//		2.候选开始地址p.searchAddr（下次查找开始的地址，用于快速查找）
 func (p *pageAlloc) find(npages uintptr) (uintptr, offAddr) {
 	assertLockHeld(p.mheapLock)
 
@@ -706,11 +714,12 @@ func (p *pageAlloc) find(npages uintptr) (uintptr, offAddr) {
 	//
 	// At the end of the search, base.addr() is the best new
 	// searchAddr we could deduce in this search.
+	// 定义边界值
 	firstFree := struct {
 		base, bound offAddr
 	}{
-		base:  minOffAddr,
-		bound: maxOffAddr,
+		base:  minOffAddr, // 基地址(开始地址)
+		bound: maxOffAddr, // 结束地址
 	}
 	// foundFree takes the given address range [addr, addr+size) and
 	// updates firstFree if it is a narrower range. The input range must
@@ -721,12 +730,13 @@ func (p *pageAlloc) find(npages uintptr) (uintptr, offAddr) {
 	// pages on the root level and narrow that down if we descend into
 	// that summary. But as soon as we need to iterate beyond that summary
 	// in a level to find a large enough range, we'll stop narrowing.
+	// 查看该区域是否合法,并重新设置边界值
 	foundFree := func(addr offAddr, size uintptr) {
 		if firstFree.base.lessEqual(addr) && addr.add(size-1).lessEqual(firstFree.bound) {
 			// This range fits within the current firstFree window, so narrow
 			// down the firstFree window to the base and bound of this range.
-			firstFree.base = addr
-			firstFree.bound = addr.add(size - 1)
+			firstFree.base = addr                // 基地址(开始地址)
+			firstFree.bound = addr.add(size - 1) // 结束地址
 		} else if !(addr.add(size-1).lessThan(firstFree.base) || firstFree.bound.lessThan(addr)) {
 			// This range only partially overlaps with the firstFree range,
 			// so throw.
@@ -744,10 +754,11 @@ func (p *pageAlloc) find(npages uintptr) (uintptr, offAddr) {
 	lastSumIdx := -1
 
 nextLevel:
-	for l := 0; l < len(p.summary); l++ {
+	for l := 0; l < len(p.summary); l++ { // 便利summary层级，共5层
 		// For the root level, entriesPerBlock is the whole level.
-		entriesPerBlock := 1 << levelBits[l]
-		logMaxPages := levelLogPages[l]
+		// 当前级别管理的连续块数
+		entriesPerBlock := 1 << levelBits[l] // 获取当前层级关心的连续块数(每层关心的块数是固定的)
+		logMaxPages := levelLogPages[l]      // 所需的最大页面数（后面会根据这个值计算最大内存值）
 
 		// We've moved into a new level, so let's update i to our new
 		// starting index. This is a no-op for level 0.
