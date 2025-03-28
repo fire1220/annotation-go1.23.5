@@ -1152,6 +1152,8 @@ func (h *mheap) tryAllocMSpan() *mspan {
 // Running on the system stack also ensures that we won't
 // switch Ps during this function. See tryAllocMSpan for details.
 //
+// 注释：获取mspan结构
+//
 //go:systemstack
 func (h *mheap) allocMSpanLocked() *mspan {
 	assertLockHeld(&h.lock)
@@ -1222,7 +1224,7 @@ func (h *mheap) freeMSpanLocked(s *mspan) {
 func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass) (s *mspan) {
 	// Function-global state.
 	gp := getg()
-	base, scav := uintptr(0), uintptr(0)
+	base, scav := uintptr(0), uintptr(0) // base要申请的连续空间地址和scav要申请的内存大小
 	growth := uintptr(0)
 
 	// On some platforms we need to provide physical page aligned stack
@@ -1293,7 +1295,7 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 				throw("grew heap, but no adequate free space found")
 			}
 		}
-		base = alignUp(base, physPageSize) // 内存对齐
+		base = alignUp(base, physPageSize) // 内存向上对齐
 		scav = h.pages.allocRange(base, npages)
 	}
 
@@ -1316,7 +1318,7 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 	if s == nil {
 		// We failed to get an mspan earlier, so grab
 		// one now that we have the heap lock.
-		s = h.allocMSpanLocked()
+		s = h.allocMSpanLocked() // 获取mspan结构
 	}
 	unlock(&h.lock)
 
