@@ -762,16 +762,17 @@ nextLevel:
 
 		// We've moved into a new level, so let's update i to our new
 		// starting index. This is a no-op for level 0.
-		i <<= levelBits[l]
+		i <<= levelBits[l] // 每层管理连续8（左移动3位）块，定位当前级别管理连续8块的起始索引
 
 		// Slice out the block of entries we care about.
-		entries := p.summary[l][i : i+entriesPerBlock]
+		entries := p.summary[l][i : i+entriesPerBlock] // 当前级别管理连续8块的索引范围
 
 		// Determine j0, the first index we should start iterating from.
 		// The searchAddr may help us eliminate iterations if we followed the
 		// searchAddr on the previous level or we're on the root level, in which
 		// case the searchAddr should be the same as i after levelShift.
 		j0 := 0
+		// 通过searchAddr判断是否可以减少迭代次数（searchAddr之前的都是已经分配过的了）
 		if searchIdx := offAddrToLevelIndex(l, p.searchAddr); searchIdx&^(entriesPerBlock-1) == i {
 			j0 = searchIdx & (entriesPerBlock - 1)
 		}
@@ -786,9 +787,9 @@ nextLevel:
 		//
 		// size contains the size of the currently considered
 		// run of consecutive pages.
-		var base, size uint
-		for j := j0; j < len(entries); j++ {
-			sum := entries[j]
+		var base, size uint                  // base用于确定h.arenas的下标；size(当前可用连续页数)首尾相加(end+start表示当前连续空闲页)
+		for j := j0; j < len(entries); j++ { // 开始迭代当前层
+			sum := entries[j] // 当前summary
 			if sum == 0 {
 				// A full entry means we broke any streak and
 				// that we should skip it altogether.
@@ -798,21 +799,21 @@ nextLevel:
 
 			// We've encountered a non-zero summary which means
 			// free memory, so update firstFree.
-			foundFree(levelIndexToOffAddr(l, i+j), (uintptr(1)<<logMaxPages)*pageSize)
+			foundFree(levelIndexToOffAddr(l, i+j), (uintptr(1)<<logMaxPages)*pageSize) // 查看该区域是否合法,并重新设置边界值
 
-			s := sum.start()
-			if size+s >= uint(npages) {
+			s := sum.start()            // 当前summary的起始页数,起始连续可分配的页数量
+			if size+s >= uint(npages) { // size+s表示上一个end的连续页+当前起始页数
 				// If size == 0 we don't have a run yet,
 				// which means base isn't valid. So, set
 				// base to the first page in this block.
 				if size == 0 {
-					base = uint(j) << logMaxPages
+					base = uint(j) << logMaxPages // 用于确定h.arenas的下标
 				}
 				// We hit npages; we're done!
-				size += s
+				size += s // 首尾相加的连续空闲页数量
 				break
 			}
-			if sum.max() >= uint(npages) {
+			if sum.max() >= uint(npages) { // 最大连续页面数大于等于npages（说明下层一定符合要求）,则进入下层寻找。
 				// The entry itself contains npages contiguous
 				// free pages, so continue on the next level
 				// to find that run.
@@ -821,12 +822,12 @@ nextLevel:
 				lastSum = sum
 				continue nextLevel
 			}
-			if size == 0 || s < 1<<logMaxPages {
+			if size == 0 || s < 1<<logMaxPages { // 如果依然没有找到，则把结尾连续页保存起来，用于和下一个起始连续页相加（首尾相接）
 				// We either don't have a current run started, or this entry
 				// isn't totally free (meaning we can't continue the current
 				// one), so try to begin a new run by setting size and base
 				// based on sum.end.
-				size = sum.end()
+				size = sum.end() // 当前summary的结束连续页数，用于首尾相加
 				base = uint(j+1)<<logMaxPages - size
 				continue
 			}
@@ -1019,11 +1020,10 @@ const (
 //
 //	译：
 //		pallocSum 是一种打包的摘要类型，它将三个数字：start、max 和 end 打包成一个 8 字节的值。
-//		这些值是对位图的摘要，因此是计数值，每个值的最大值可能为 2^21 - 1，或者所有三个值都等于 2^21。
-//		后一种情况通过仅设置第 64 位来表示。
+//		这些值是对位图的摘要，因此是计数值，每个值的最大值可能为 2^21 - 1，或者所有三个值都等于 2^21 这种情况通过仅设置第64位来表示。
 //
 // pallocSum类型是基于 uint64 的一种紧凑摘要类型，用于将三个数值（start、max 和 end）打包成一个 8 字节的值。
-// 每个值的最大范围为 (2^21 - 1)，或者所有三个值都等于 (2^21)，此时通过设置第 64 位来表示特殊情况。
+// 每个值的最大范围为 (2^21 - 1)，或者所有三个值都等于 (2^21) 此时通过设置第 64 位来表示特殊情况。
 // 函数 packPallocSum 用于将这三个值打包成一个 pallocSum 类型。
 // end(左21位), max(中间21位) , start(右21位)
 type pallocSum uint64
@@ -1040,6 +1040,7 @@ func packPallocSum(start, max, end uint) pallocSum {
 }
 
 // start extracts the start value from a packed sum.
+// 起始页连续可分配的页数量
 func (p pallocSum) start() uint {
 	if uint64(p)&uint64(1<<63) != 0 {
 		return maxPackedValue
@@ -1048,6 +1049,7 @@ func (p pallocSum) start() uint {
 }
 
 // max extracts the max value from a packed sum.
+// （最大可分配连续页数量）当前层管理的下层最大可分配的页数量，如果可用则会去下一层寻找
 func (p pallocSum) max() uint {
 	if uint64(p)&uint64(1<<63) != 0 {
 		return maxPackedValue
@@ -1056,6 +1058,7 @@ func (p pallocSum) max() uint {
 }
 
 // end extracts the end value from a packed sum.
+// 结尾连续可分配页数量,通常用于首尾相接时使用
 func (p pallocSum) end() uint {
 	if uint64(p)&uint64(1<<63) != 0 {
 		return maxPackedValue
