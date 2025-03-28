@@ -1059,7 +1059,8 @@ func (h *mheap) setSpans(base, npage uintptr, s *mspan) {
 // critical for future page allocations.
 //
 // There are no locking constraints on this method.
-// 注释：检查是否需要初始化内存空间，更新堆内存的arenas元数据
+// 注释: 判断分配前是否需要归零
+// 返回值：needZero表示分配前是否需要归零
 func (h *mheap) allocNeedsZero(base, npage uintptr) (needZero bool) {
 	for npage > 0 {
 		ai := arenaIndex(base) // 根据地址（虚地址）计算 h.arenas 下标
