@@ -153,6 +153,7 @@ func offAddrToLevelIndex(level int, addr offAddr) int {
 
 // levelIndexToOffAddr converts an index into summary[level] into
 // the corresponding address in the offset address space.
+// 根据层级索引和偏移量计算地址空间中的具体地址
 func levelIndexToOffAddr(level, idx int) offAddr {
 	return offAddr{(uintptr(idx) << levelShift[level]) + arenaBaseOffset}
 }
@@ -834,10 +835,10 @@ nextLevel:
 			// The entry is completely free, so continue the run.
 			size += 1 << logMaxPages
 		}
-		if size >= uint(npages) {
+		if size >= uint(npages) { // 说明已经找到可用连续的空闲页空间
 			// We found a sufficiently large run of free pages straddling
 			// some boundary, so compute the address and return it.
-			addr := levelIndexToOffAddr(l, i).add(uintptr(base) * pageSize).addr()
+			addr := levelIndexToOffAddr(l, i).add(uintptr(base) * pageSize).addr() // 根据层级索引和偏移量计算地址空间中的具体地址
 			return addr, p.findMappedAddr(firstFree.base)
 		}
 		if l == 0 {
