@@ -669,7 +669,7 @@ func (p *pageAlloc) findMappedAddr(addr offAddr) offAddr {
 //		3.计算并返回一个新的候选 p.searchAddr，用于进一步优化后续搜索。
 //		4.如果未找到符合条件的内存区域，则返回基地址为 0，此时候选 p.searchAddr 无效。
 //	返回值：
-//		1.虚地址base（该地址用来计算h.arenas[ai.l1()][ai.l2()]的两个下标l1和l2，在非Windows64平台l1=0,l2=base）
+//		1.虚地址base作为span.startAddr的值（可以根据该地址计算h.arenas[ai.l1()][ai.l2()]的两个下标l1和l2，在非Windows64平台l1=0,l2=base）
 //		2.候选开始地址p.searchAddr（下次查找开始的地址，用于快速查找）
 func (p *pageAlloc) find(npages uintptr) (uintptr, offAddr) {
 	assertLockHeld(p.mheapLock)

@@ -145,7 +145,7 @@ type mheap struct {
 	// platforms (even 64-bit), arenaL1Bits is 0, making this
 	// effectively a single-level map. In this case, arenas[0]
 	// will never be nil.
-	arenas [1 << arenaL1Bits]*[1 << arenaL2Bits]*heapArena // 把物理内存划分成多个快（heapArena）,是个二维的图结构
+	arenas [1 << arenaL1Bits]*[1 << arenaL2Bits]*heapArena // (存储mspan和物理地址)把物理内存划分成多个快（heapArena）,是个二维的图结构
 
 	// arenasHugePages indicates whether arenas' L2 entries are eligible
 	// to be backed by huge pages.
@@ -240,6 +240,7 @@ var mheap_ mheap
 // outside of the Go heap and accessed via the mheap_.arenas index.
 // 注释：可以理解为mheap的分块存储。每一块管理多个mspan。
 // 该结构会把物理地址划分成多个mspan提供给mheap使用，mspan则管理多个page页
+// 存储mspan和物理地址
 type heapArena struct {
 	_ sys.NotInHeap
 
@@ -1060,10 +1061,11 @@ func (h *mheap) setSpans(base, npage uintptr, s *mspan) {
 // There are no locking constraints on this method.
 func (h *mheap) allocNeedsZero(base, npage uintptr) (needZero bool) {
 	for npage > 0 {
-		ai := arenaIndex(base)
-		ha := h.arenas[ai.l1()][ai.l2()] // Linux平台是ha := h.arenas[0][base] 是个一维的数组
+		ai := arenaIndex(base) // 根据地址（虚地址）计算 h.arenas 下标
+		// Linux平台是ha := h.arenas[0][base] 是个一维的数组
+		ha := h.arenas[ai.l1()][ai.l2()] // 获取当前页的heapArena指针
 
-		zeroedBase := atomic.Loaduintptr(&ha.zeroedBase)
+		zeroedBase := atomic.Loaduintptr(&ha.zeroedBase) // 物理地址
 		arenaBase := base % heapArenaBytes
 		if arenaBase < zeroedBase {
 			// We extended into the non-zeroed part of the
