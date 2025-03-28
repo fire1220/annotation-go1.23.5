@@ -1333,17 +1333,28 @@ HaveSpan:
 	// It's fine to do this after allocating because we expect any scavenged
 	// pages not to get touched until we return. Simultaneously, it's important
 	// to do this before calling sysUsed because that may commit address space.
-	bytesToScavenge := uintptr(0)
-	forceScavenge := false
+	//	译：
+	//		根据刚刚分配的内存情况，决定是否需要进行内存回收（scavenge）。
+	//		具体来说，我们会跟踪所有以下条件所需的最大内存回收量，
+	//		假设最大值可以满足所有检查条件（例如，如果需要回收 X 字节以满足内存限制，
+	//		需要回收 Y 字节以满足堆增长回收需求，并且 Y > X，那么选择 Y 是可以的，
+	//		因为内存限制仍然得到满足）。
+	//
+	//		在分配内存后执行此操作是可行的，因为我们期望任何被回收的页面在我们返回之前不会被访问。
+	//		同时，在调用 sysUsed 之前执行此操作非常重要，因为该操作可能会提交地址空间。
+	bytesToScavenge := uintptr(0) // 计算需要回收的字节数
+	forceScavenge := false // 是否需要强制回收
 	if limit := gcController.memoryLimit.Load(); !gcCPULimiter.limiting() {
 		// Assist with scavenging to maintain the memory limit by the amount
 		// that we expect to page in.
-		inuse := gcController.mappedReady.Load()
+		// 译：通过预期的页加载量来协助进行内存回收，以维持内存限制
+		inuse := gcController.mappedReady.Load() // (待回收的虚拟内存总量)获取当前内存使用量，处于就绪状态的虚拟内存总量
 		// Be careful about overflow, especially with uintptrs. Even on 32-bit platforms
 		// someone can set a really big memory limit that isn't maxInt64.
-		if uint64(scav)+inuse > uint64(limit) {
-			bytesToScavenge = uintptr(uint64(scav) + inuse - uint64(limit))
-			forceScavenge = true
+		// 译：注意避免溢出，特别是对于 uintptr 类型。即使在 32 位平台上，也可能设置一个非常大的内存限制，这个限制可能不是 maxInt64。
+		if uint64(scav)+inuse > uint64(limit) { // 如果当前内存使用量加上待回收的虚拟内存总量超过了内存限制
+			bytesToScavenge = uintptr(uint64(scav) + inuse - uint64(limit)) // 超出内存限制的要强制回收
+			forceScavenge = true                                            // 强制回收
 		}
 	}
 	if goal := scavenge.gcPercentGoal.Load(); goal != ^uint64(0) && growth > 0 {

@@ -27,12 +27,36 @@ import "internal/runtime/atomic"
 // if the capacity of the bucket is 1 cpu-second, then the limiter will not
 // kick in until at least 1 full cpu-second in the last 2 cpu-second window
 // is spent on GC CPU time.
+//
+//	译：
+//		gcCPULimiter 是一种在垃圾回收 (GC) CPU 使用率可能过高并抑制应用程序运行（例如，进入死亡循环）的情况下限制其使用率的机制。
+//
+//		该限制器的核心是一个漏桶机制，它通过 GC 的 CPU 时间填充，并通过突变器时间消耗。由于桶的填充和消耗直接与时间相关（即没有任何加权），
+//		这实际上设置了一个非常保守的 50% 限制。虽然可以直接强制执行此限制，但漏桶的目的在于适应 GC CPU 使用率的峰值而不影响吞吐量。
+//
+//		注意，漏桶机制中的桶值永远不会变为负数，因此 GC 不会因大量非 GC 运行期间的 CPU 时间而获得信用。这是有意为之，
+//		因为如果应用程序在一段时间内（例如一整天）保持空闲状态，可能会积累足够的信用，导致第二天无法防止死亡循环。桶的容量是 GC 唯一的余地。
+//
+//		因此，容量还定义了限制器考虑的时间窗口。例如，如果桶的容量为 1 CPU 秒，
+//		则限制器不会在最近 2 CPU 秒的窗口中花费至少 1 整个 CPU 秒用于 GC 之前启动。
+//	注释：
+//		用于限制垃圾回收（GC）CPU使用率的机制，核心是基于漏桶算法。功能分解如下：
+//		1.漏桶通过GC CPU时间和突变器时间分别填充和消耗，确保GC CPU使用率不超过50%。
+//		2.漏桶容量定义了允许GC超标的窗口大小，避免长时间闲置后积累过多信用导致系统崩溃。
+//		3.桶值永远不会为负，确保GC不会因非运行期间的CPU时间获得额外信用。
 var gcCPULimiter gcCPULimiterState
 
+// 注释：
+// 限制垃圾回收（GC）的 CPU 使用率。其主要功能包括：
+// 1.通过 lock 和原子操作确保并发安全。
+// 2.使用 enabled 和 gcEnabled 控制 GC 是否启用及跟踪辅助时间。
+// 3.通过 bucket 实现令牌桶算法，限制 GC 的 CPU 使用量。
+// 4.记录累积的协助时间、空闲标记时间和空闲线程时间，用于动态调整限流策略。
+// 5.提供测试模式支持，便于单元测试
 type gcCPULimiterState struct {
 	lock atomic.Uint32
 
-	enabled atomic.Bool
+	enabled atomic.Bool // 否启用了CPU限制器,表示Go垃圾回收器是否需要限制CPU使用
 
 	// gcEnabled is an internal copy of gcBlackenEnabled that determines
 	// whether the limiter tracks total assist time.
@@ -87,6 +111,7 @@ type gcCPULimiterState struct {
 // should take action to limit CPU utilization.
 //
 // It is safe to call concurrently with other operations.
+// 注释：检查当前是否启用了 CPU 限制器，返回布尔值，表示 Go 垃圾回收器是否需要限制 CPU 使用
 func (l *gcCPULimiterState) limiting() bool {
 	return l.enabled.Load()
 }

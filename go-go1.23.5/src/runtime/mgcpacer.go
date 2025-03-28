@@ -100,7 +100,16 @@ type gcControllerState struct {
 	// This is an int64 instead of a uint64 to more easily maintain parity with
 	// the SetMemoryLimit API, which sets a maximum at MaxInt64. This value
 	// should never be negative.
-	memoryLimit atomic.Int64
+	//	译：
+	//		memoryLimit 是以字节为单位的软内存限制。
+	//
+	//		该值从 GOMEMLIMIT 环境变量初始化。GOMEMLIMIT=off 等价于 MaxInt64，
+	//		这意味着在实际中没有软内存限制。
+	//
+	//		memoryLimit 是 int64 类型而不是 uint64 类型，以便更容易与
+	//		SetMemoryLimit API 保持一致，该 API 将最大值设置为 MaxInt64。此值
+	//		不应为负数。
+	memoryLimit atomic.Int64 // 软内存限制(以字节为单位)
 
 	// heapMinimum is the minimum heap size at which to trigger GC.
 	// For small heaps, this overrides the usual GOGC*live set rule.
@@ -359,7 +368,7 @@ type gcControllerState struct {
 	heapFree     sysMemStat    // bytes not in any span, but not released to the OS
 	totalAlloc   atomic.Uint64 // 分配的所有bytes数（分配的内大小） total bytes allocated
 	totalFree    atomic.Uint64 // total bytes freed
-	mappedReady  atomic.Uint64 // total virtual memory in the Ready state (see mem.go).
+	mappedReady  atomic.Uint64 // (待回收的虚拟内存总量)(获取当前内存使用量)处于就绪状态的虚拟内存总量(见mem.go) // total virtual memory in the Ready state (see mem.go).
 
 	// test indicates that this is a test-only copy of gcControllerState.
 	test bool
