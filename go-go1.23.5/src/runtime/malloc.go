@@ -243,7 +243,24 @@ const (
 	// This is particularly important with the race detector,
 	// since it significantly amplifies the cost of committed
 	// memory.
-	heapArenaBytes = 1 << logHeapArenaBytes
+	// 译：
+	// 堆地址的位数、堆arena的大小以及L1和L2 arena映射表的大小之间存在以下关系：
+	//   (1 << 地址位数) = arena大小 * L1条目数 * L2条目数
+	// 当前，我们按以下方式平衡这些参数：
+	//       平台          地址位数  Arena大小  L1条目数   L2条目数
+	// --------------  ---------  ----------  ----------  -----------
+	//       */64-bit         48        64MB           1    4M (32MB)
+	// windows/64-bit         48         4MB          64    1M  (8MB)
+	//      ios/arm64         33         4MB           1  2048  (8KB)
+	//       */32-bit         32         4MB           1  1024  (4KB)
+	//     */mips(le)         31         4MB           1   512  (2KB)
+	// heapArenaBytes 是堆arena的大小。堆由大小为heapArenaBytes的内存映射组成，
+	// 并且对齐到heapArenaBytes。初始堆映射是一个arena。
+	// 目前，在非Windows的64位平台上为64MB，在32位平台和Windows上为4MB。
+	// 我们在Windows上使用较小的arena，因为所有提交的内存都会计入进程，
+	// 即使未被使用。因此，对于小堆的进程，映射的arena空间需要适当减少。
+	// 这在启用竞态检测器时尤为重要，因为它会显著放大提交内存的成本。
+	heapArenaBytes = 1 << logHeapArenaBytes // 堆arena的大小，用于堆内存的分配和对齐
 
 	heapArenaWords = heapArenaBytes / goarch.PtrSize
 
