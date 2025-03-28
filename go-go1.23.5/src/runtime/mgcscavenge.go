@@ -239,6 +239,9 @@ var scavenge struct {
 	// memory to the OS. This goal is derived from gcController.gcPercent
 	// by choosing to retain enough memory to allocate heap memory up to
 	// the heap goal.
+	//	译：
+	//		gcPercentGoal 是运行时试图通过将内存归还给操作系统而保持的堆内存数量的目标值（通过 heapRetained 测量）。
+	//		这个目标值从 gcController.gcPercent 中得出，目的是保留足够的内存，以便能够分配堆内存达到目标值。
 	gcPercentGoal atomic.Uint64
 
 	// memoryLimitGoal is the amount of memory retained by the runtime (
