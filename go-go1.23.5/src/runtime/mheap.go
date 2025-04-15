@@ -66,7 +66,7 @@ type mheap struct {
 	// could self-deadlock if its stack grows with the lock held.
 	lock mutex // 由于是全局的，所有使用时必须上锁
 
-	pages pageAlloc // page allocation data structure
+	pages pageAlloc // 页分配器的结构体 // page allocation data structure
 
 	sweepgen uint32 // sweep generation, see comment in mspan; written during STW
 
@@ -188,8 +188,9 @@ type mheap struct {
 
 	// curArena is the arena that the heap is currently growing
 	// into. This should always be physPageSize-aligned.
+	// 当前arena的边界值
 	curArena struct {
-		base, end uintptr
+		base, end uintptr // 开始和结束的地址
 	}
 
 	// central free lists for small size classes.
@@ -1299,6 +1300,7 @@ func (h *mheap) allocSpan(npages uintptr, typ spanAllocType, spanclass spanClass
 		scav = h.pages.allocRange(base, npages)
 	}
 
+	// 如果还没有找到则需要扩容
 	if base == 0 {
 		// Try to acquire a base address.
 		base, scav = h.pages.alloc(npages)
@@ -1541,6 +1543,10 @@ func (h *mheap) initSpan(s *mspan, typ spanAllocType, spanclass spanClass, base,
 // returning how much the heap grew by and whether it worked.
 //
 // h.lock must be held.
+// 注释：扩容，返回扩容的大小和是否扩容成功
+// 如果arena空间不足则会进行扩容arena
+// 扩容page页后返回扩容的大小和是否扩容成功
+// Linux下申请内存是调用系统的mmap系统函数申请的
 func (h *mheap) grow(npage uintptr) (uintptr, bool) {
 	assertLockHeld(&h.lock)
 
@@ -1549,49 +1555,60 @@ func (h *mheap) grow(npage uintptr) (uintptr, bool) {
 	// round up to pallocChunkPages which is on the order
 	// of MiB (generally >= to the huge page size) we
 	// won't be calling it too much.
-	ask := alignUp(npage, pallocChunkPages) * pageSize
+	// 译：
+	// 我们必须以完整的palloc块为单位扩展堆内存。
+	// 下面会调用sysMap函数，但需要注意的是，因为我们
+	// 会向上对齐到pallocChunkPages（通常是MiB级别，
+	// 通常大于等于大页大小），所以我们不会频繁调用它。
+	// 注释：内存对齐,是pallocChunkPages(页块的倍数)的倍数
+	ask := alignUp(npage, pallocChunkPages) * pageSize // 用户程序总需要的空间大小
 
 	totalGrowth := uintptr(0)
 	// This may overflow because ask could be very large
 	// and is otherwise unrelated to h.curArena.base.
-	end := h.curArena.base + ask
-	nBase := alignUp(end, physPageSize)
+	end := h.curArena.base + ask        // 结束地址
+	nBase := alignUp(end, physPageSize) // 结束地址(向物理页对齐)
+	// 1.如果申请内存的基地址大于当前arena的结束地址,此时是溢出
+	// 2.如果申请的结束地址小于当前arena的起始地址
 	if nBase > h.curArena.end || /* overflow */ end < h.curArena.base {
 		// Not enough room in the current arena. Allocate more
 		// arena space. This may not be contiguous with the
 		// current arena, so we have to request the full ask.
-		av, asize := h.sysAlloc(ask, &h.arenaHints, true)
+		// 译：当前arena空间不足。分配更多的arena空间。由于新分配的空间可能不与当前arena连续，因此我们需要请求完整的所需空间。
+		av, asize := h.sysAlloc(ask, &h.arenaHints, true) // 分配更多的arena空间,确保arena能够容纳申请内存地址映射
 		if av == nil {
 			inUse := gcController.heapFree.load() + gcController.heapReleased.load() + gcController.heapInUse.load()
 			print("runtime: out of memory: cannot allocate ", ask, "-byte block (", inUse, " in use)\n")
 			return 0, false
 		}
 
-		if uintptr(av) == h.curArena.end {
+		if uintptr(av) == h.curArena.end { // 如果等于当前arena的结束地址，表示申请的arena和原有的是连续的，则继续使用原有的arena
 			// The new space is contiguous with the old
 			// space, so just extend the current space.
-			h.curArena.end = uintptr(av) + asize
-		} else {
+			h.curArena.end = uintptr(av) + asize // 设置arena的结束位置
+		} else { // 如果不是连续的，则需要重新分配一个arena, 并且把旧的arena全部分配到page页里准备使用
 			// The new space is discontiguous. Track what
 			// remains of the current space and switch to
 			// the new space. This should be rare.
-			if size := h.curArena.end - h.curArena.base; size != 0 {
+			if size := h.curArena.end - h.curArena.base; size != 0 { // size是旧arena的剩余内存大小，如果有值则分配到page页里提供使用
 				// Transition this space from Reserved to Prepared and mark it
 				// as released since we'll be able to start using it after updating
 				// the page allocator and releasing the lock at any time.
-				sysMap(unsafe.Pointer(h.curArena.base), size, &gcController.heapReleased)
-				// Update stats.
-				stats := memstats.heapStats.acquire()
-				atomic.Xaddint64(&stats.released, int64(size))
-				memstats.heapStats.release()
+				// Linux下通过mmap系统调用函数把内存地址映射到h.curArena.base上
+				sysMap(unsafe.Pointer(h.curArena.base), size, &gcController.heapReleased) // 映射系统内存地址，申请系统内存（通过mmap系统调用函数）
+				// Update stats. // 更新统计数据
+				stats := memstats.heapStats.acquire()          // 获取内存统计
+				atomic.Xaddint64(&stats.released, int64(size)) // 记录内存分配信息，记录分配到页中的内存总量
+				memstats.heapStats.release()                   // 释放内存统计
 				// Update the page allocator's structures to make this
 				// space ready for allocation.
-				h.pages.grow(h.curArena.base, size)
-				totalGrowth += size
+				// v是申请的内存地址映射，把v地址映射到页中
+				h.pages.grow(h.curArena.base, size) // 页扩容，入参是arena堆内存的起始地址和扩容的大小
+				totalGrowth += size                 // 累加扩容的大小
 			}
 			// Switch to the new space.
-			h.curArena.base = uintptr(av)
-			h.curArena.end = uintptr(av) + asize
+			h.curArena.base = uintptr(av)        // 重新设置当前arena的起始地址
+			h.curArena.end = uintptr(av) + asize // 重新设置当前arena的结束地址
 		}
 
 		// Recalculate nBase.
@@ -1602,26 +1619,35 @@ func (h *mheap) grow(npage uintptr) (uintptr, bool) {
 	}
 
 	// Grow into the current arena.
-	v := h.curArena.base
-	h.curArena.base = nBase
+	v := h.curArena.base    // 当前的arena堆内存的起始地址
+	h.curArena.base = nBase // 更新当前arena的起始地址
 
 	// Transition the space we're going to use from Reserved to Prepared.
 	//
 	// The allocation is always aligned to the heap arena
 	// size which is always > physPageSize, so its safe to
 	// just add directly to heapReleased.
-	sysMap(unsafe.Pointer(v), nBase-v, &gcController.heapReleased)
+	// 译：
+	// 将我们要使用的空间状态从“预留”转换为“已准备”。
+	// 分配总是对齐到堆arena大小，该大小始终大于物理页大小，
+	// 因此可以直接将其添加到 heapReleased 中，这是安全的。
+	// 注释：
+	// 1.Linux下通过mmap申请内存
+	// 2.内存大小累加到heapReleased中，heapReleased是统计已经释放的堆内存(堆中可用内存)
+	// 3.申请的内存地址映射，映射到v里
+	sysMap(unsafe.Pointer(v), nBase-v, &gcController.heapReleased) // Linux下通过mmap申请内存
 
 	// The memory just allocated counts as both released
 	// and idle, even though it's not yet backed by spans.
-	stats := memstats.heapStats.acquire()
-	atomic.Xaddint64(&stats.released, int64(nBase-v))
-	memstats.heapStats.release()
+	stats := memstats.heapStats.acquire()             // 获取内存统计
+	atomic.Xaddint64(&stats.released, int64(nBase-v)) // 记录内存分配信息，记录分配到页中的内存总量
+	memstats.heapStats.release()                      // 释放内存统计
 
 	// Update the page allocator's structures to make this
 	// space ready for allocation.
-	h.pages.grow(v, nBase-v)
-	totalGrowth += nBase - v
+	// v是申请的内存地址映射，把v地址映射到页中
+	h.pages.grow(v, nBase-v) // 页扩容，入参是arena堆内存的起始地址和扩容的大小
+	totalGrowth += nBase - v // 计算扩容的大小
 	return totalGrowth, true
 }
 

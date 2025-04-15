@@ -150,7 +150,13 @@ func sysReserve(v unsafe.Pointer, n uintptr) unsafe.Pointer {
 // memory region can be efficiently transitioned to Ready.
 //
 // sysStat must be non-nil.
+// 译：
+// sysMap将内存区域从预留状态（Reserved）转换为准备状态（Prepared）。它确保内存区域可以高效地转换为就绪状态（Ready）。
+// sysStat 不能为空。
+// 注释：
+// 1.Linux下通过mmap申请内存
+// 2.统计申请的内存到sysStat里
 func sysMap(v unsafe.Pointer, n uintptr, sysStat *sysMemStat) {
 	sysStat.add(int64(n))
-	sysMapOS(v, n)
+	sysMapOS(v, n) // 申请内存，并将其映射到虚拟地址空间中。不同系统的实现可能会有所不同。(通过CGO调用系统的mmap系统调用函数)
 }

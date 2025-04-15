@@ -26,6 +26,7 @@ var _cgo_munmap unsafe.Pointer
 // support sanitizer interceptors. Don't allow stack splits, since this function
 // (used by sysAlloc) is called in a lot of low-level parts of the runtime and
 // callers often assume it won't acquire any locks.
+// 通过CGO调用系统的mmap系统调用函数
 //
 //go:nosplit
 func mmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uint32) (unsafe.Pointer, int) {
@@ -37,7 +38,7 @@ func mmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uint32) (un
 		// an errno value.
 		var ret uintptr
 		systemstack(func() {
-			ret = callCgoMmap(addr, n, prot, flags, fd, off)
+			ret = callCgoMmap(addr, n, prot, flags, fd, off) // 通过CGO调用系统的mmap系统调用函数
 		})
 		if ret < 4096 {
 			return nil, int(ret)
@@ -60,7 +61,7 @@ func sysMmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uint32) 
 
 // callCgoMmap calls the mmap function in the runtime/cgo package
 // using the GCC calling convention. It is implemented in assembly.
-func callCgoMmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uint32) uintptr
+func callCgoMmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uint32) uintptr // 通过CGO调用系统的mmap系统调用函数
 
 // sysMunmap calls the munmap system call. It is implemented in assembly.
 func sysMunmap(addr unsafe.Pointer, n uintptr)

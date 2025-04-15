@@ -666,10 +666,11 @@ func (s *sysMemStat) add(n int64) {
 // that need to be updated together in order for them to be kept
 // consistent with one another.
 // 注释：一个环形的用于存储内存的统计信息
+// 内存统计信息
 type heapStatsDelta struct {
 	// Memory stats.
 	committed       int64 // byte delta of memory committed
-	released        int64 // byte delta of released memory generated
+	released        int64 // （记录分配到页中的内存总量）记录释放(arena中释放出去的)内存的增量 // byte delta of released memory generated
 	inHeap          int64 // byte delta of memory placed in the heap
 	inStacks        int64 // byte delta of memory reserved for stacks
 	inWorkBufs      int64 // byte delta of memory reserved for work bufs

@@ -364,7 +364,7 @@ type gcControllerState struct {
 	// useful to couple these stats more tightly to the gcController, which
 	// is intimately connected to how that memory limit is maintained.
 	heapInUse    sysMemStat    // bytes in mSpanInUse spans
-	heapReleased sysMemStat    // bytes released to the OS
+	heapReleased sysMemStat    // (堆中可用的内存)堆中已释放但尚未返回给操作系统的内存数量 // bytes released to the OS
 	heapFree     sysMemStat    // bytes not in any span, but not released to the OS
 	totalAlloc   atomic.Uint64 // 分配的所有bytes数（分配的内大小） total bytes allocated
 	totalFree    atomic.Uint64 // total bytes freed

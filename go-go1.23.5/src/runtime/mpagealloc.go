@@ -372,6 +372,7 @@ func (p *pageAlloc) chunkOf(ci chunkIdx) *pallocData {
 // It may allocate metadata, in which case *p.sysStat will be updated.
 //
 // p.mheapLock must be held.
+// 注释：页扩容，入参是arena堆内存的起始地址和扩容的大小
 func (p *pageAlloc) grow(base, size uintptr) {
 	assertLockHeld(p.mheapLock)
 

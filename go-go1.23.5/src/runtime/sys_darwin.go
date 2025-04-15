@@ -251,9 +251,15 @@ func osinit_hack() {
 }
 func osinit_hack_trampoline()
 
+// macOS系统实现
 // mmap is used to do low-level memory allocation via mmap. Don't allow stack
 // splits, since this function (used by sysAlloc) is called in a lot of low-level
 // parts of the runtime and callers often assume it won't acquire any locks.
+//
+// 该代码定义了一个名为 mmap 的函数，用于通过系统调用进行低级别的内存分配。具体功能如下：
+// 1.函数参数包括内存地址、大小、保护标志、映射标志、文件描述符和偏移量。
+// 2.使用 libcCall 调用底层的 mmap_trampoline 函数完成内存映射操作。
+// 3.返回映射后的内存地址和状态码。
 //
 //go:nosplit
 func mmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uint32) (unsafe.Pointer, int) {

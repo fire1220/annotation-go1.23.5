@@ -162,8 +162,10 @@ func sysReserveOS(v unsafe.Pointer, n uintptr) unsafe.Pointer {
 	return p
 }
 
+// Linux系统实现
+// 通过调用系统函数mmap来映射内存(申请内存)
 func sysMapOS(v unsafe.Pointer, n uintptr) {
-	p, err := mmap(v, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_FIXED|_MAP_PRIVATE, -1, 0)
+	p, err := mmap(v, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_FIXED|_MAP_PRIVATE, -1, 0) // 通过CGO调用系统的mmap系统调用函数
 	if err == _ENOMEM {
 		throw("runtime: out of memory")
 	}

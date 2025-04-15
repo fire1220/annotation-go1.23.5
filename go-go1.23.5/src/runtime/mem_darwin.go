@@ -64,7 +64,14 @@ func sysReserveOS(v unsafe.Pointer, n uintptr) unsafe.Pointer {
 
 const _ENOMEM = 12
 
+// 针对macOS系统的实现
+// 注释：关联系统内存映射，可以理解为向系统申请内存，这样做的效率高，可以直接管理和操作系统内存的映射地址
+// 该函数 sysMapOS 的功能是将指定的内存区域映射到虚拟地址空间，具体逻辑如下：
+// 1.调用 mmap 函数尝试映射内存，设置保护标志为可读写，映射类型为匿名、固定位置和私有。
+// 2.如果返回错误 _ENOMEM，抛出内存不足异常。
+// 3.如果映射地址与预期不符或发生其他错误，打印调试信息并抛出无法映射页面的异常。
 func sysMapOS(v unsafe.Pointer, n uintptr) {
+	// 系统调用Linux下都用系统函数mmap获取内存地址映射
 	p, err := mmap(v, n, _PROT_READ|_PROT_WRITE, _MAP_ANON|_MAP_FIXED|_MAP_PRIVATE, -1, 0)
 	if err == _ENOMEM {
 		throw("runtime: out of memory")

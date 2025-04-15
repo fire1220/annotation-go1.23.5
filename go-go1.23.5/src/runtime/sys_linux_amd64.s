@@ -503,7 +503,7 @@ TEXT runtime·callCgoMmap(SB),NOSPLIT,$16
 	MOVL	flags+20(FP), CX
 	MOVL	fd+24(FP), R8
 	MOVL	off+28(FP), R9
-	MOVQ	_cgo_mmap(SB), AX
+	MOVQ	_cgo_mmap(SB), AX // CGO（Go 的 C 语言互操作工具），通过CGO调用系统的mmap函数
 	MOVQ	SP, BX
 	ANDQ	$~15, SP	// alignment as per amd64 psABI
 	MOVQ	BX, 0(SP)

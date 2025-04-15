@@ -651,6 +651,10 @@ func mallocinit() {
 // be transitioned to Prepared and then Ready before use.
 //
 // h must be locked.
+//
+// 为堆(arena空间里)分配至少n字节的空间，并且与h.arenas元数据相关联(相当于扩容了arena)，返回的指针和大小
+// 分配更多的arena空间, 确保arena能够容纳申请的内存地址映射
+// 返回新reserved的内存区域，并返回该区域的地址和大小。
 func (h *mheap) sysAlloc(n uintptr, hintList **arenaHint, register bool) (v unsafe.Pointer, size uintptr) {
 	assertLockHeld(&h.lock)
 
