@@ -12,10 +12,11 @@
 // internal linking. This is the entry point for the program from the
 // kernel for an ordinary -buildmode=exe program. The stack holds the
 // number of arguments and the C-style argv.
+// 程序启动的入口程序
 TEXT _rt0_amd64(SB),NOSPLIT,$-8
-	MOVQ	0(SP), DI	// argc
-	LEAQ	8(SP), SI	// argv
-	JMP	runtime·rt0_go(SB)
+	MOVQ	0(SP), DI	// argc  // 接受的参数个数
+	LEAQ	8(SP), SI	// argv  // 接收的参数
+	JMP	runtime·rt0_go(SB) // 跳转到 runtime·rt0_go 函数
 
 // main is common startup code for most amd64 systems when using
 // external linking. The C startup code will call the symbol "main"
@@ -156,6 +157,7 @@ GLOBL bad_cpu_msg<>(SB), RODATA, $84
 
 #endif
 
+// 注释：运行程序入口
 TEXT runtime·rt0_go(SB),NOSPLIT|NOFRAME|TOPFRAME,$0
 	// copy arguments forward on an even stack
 	MOVQ	DI, AX		// argc
@@ -266,12 +268,14 @@ needtls:
 	JEQ 2(PC)
 	CALL	runtime·abort(SB)
 ok:
+    // 真正开始执行，上面是根据不同架构初始化数据
 	// set the per-goroutine and per-mach "registers"
 	get_tls(BX)
 	LEAQ	runtime·g0(SB), CX
 	MOVQ	CX, g(BX)
 	LEAQ	runtime·m0(SB), AX
 
+    // m0和g0关联起来
 	// save m->g0 = g0
 	MOVQ	CX, m_g0(AX)
 	// save m0 to g0->m
@@ -340,6 +344,7 @@ ok:
 
 	CALL	runtime·check(SB)
 
+    // 接收参数开始执行程序初始化函数
 	MOVL	24(SP), AX		// copy argc
 	MOVL	AX, 0(SP)
 	MOVQ	32(SP), AX		// copy argv
@@ -349,13 +354,13 @@ ok:
 	CALL	runtime·schedinit(SB)
 
 	// create a new goroutine to start program
-	MOVQ	$runtime·mainPC(SB), AX		// entry
-	PUSHQ	AX
-	CALL	runtime·newproc(SB)
+	MOVQ	$runtime·mainPC(SB), AX		// entry // 把runtime.main函数句柄存起来
+	PUSHQ	AX                          // 把runtime.main函数句柄加入队列里
+	CALL	runtime·newproc(SB)         // 执行newproc函数创建逻辑处理p
 	POPQ	AX
 
 	// start this M
-	CALL	runtime·mstart(SB)
+	CALL	runtime·mstart(SB)          // 执行mstart函数启动调度,这个是用不返回的。
 
 	CALL	runtime·abort(SB)	// mstart should never return
 	RET

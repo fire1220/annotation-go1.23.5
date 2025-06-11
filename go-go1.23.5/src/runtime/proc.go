@@ -4972,6 +4972,7 @@ func malg(stacksize int32) *g {
 // Create a new g running fn.
 // Put it on the queue of g's waiting to run.
 // The compiler turns a go statement into a call to this.
+// 注释：创建逻辑处理p
 func newproc(fn *funcval) {
 	gp := getg()
 	pc := getcallerpc()
