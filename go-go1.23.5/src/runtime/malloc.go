@@ -658,7 +658,7 @@ func mallocinit() {
 func (h *mheap) sysAlloc(n uintptr, hintList **arenaHint, register bool) (v unsafe.Pointer, size uintptr) {
 	assertLockHeld(&h.lock)
 
-	n = alignUp(n, heapArenaBytes)
+	n = alignUp(n, heapArenaBytes) // 向上内存对齐
 
 	if hintList == &h.arenaHints {
 		// First, try the arena pre-reservation.
