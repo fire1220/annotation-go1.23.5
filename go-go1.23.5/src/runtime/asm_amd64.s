@@ -358,7 +358,7 @@ ok:
 	MOVQ	$runtime·mainPC(SB), AX		// entry // 把runtime.main函数句柄存起来
 	PUSHQ	AX                          // 把runtime.main函数句柄加入参数列表里，栈顶(runtime·newproc(SB)的第一个参数)
 	CALL	runtime·newproc(SB)         // 执行newproc函数创建逻辑处理p
-	POPQ	AX
+	POPQ	AX                          // 取出上面的参数位置，可以理解为引用传递
 
 	// start this M
 	CALL	runtime·mstart(SB)          // 执行mstart函数启动调度,这个是用不返回的。
