@@ -230,6 +230,8 @@ func mincore(addr unsafe.Pointer, n uintptr, dst *byte) int32
 
 var auxvreadbuf [128]uintptr
 
+// 处理系统参数
+// 不同平台对应文件不同
 func sysargs(argc int32, argv **byte) {
 	n := argc + 1
 
@@ -340,8 +342,9 @@ func getHugePageSize() uintptr {
 	return uintptr(v)
 }
 
+// 注释：初始化系统参数,不同系统对应文件不同
 func osinit() {
-	ncpu = getproccount()
+	ncpu = getproccount() // CPU核心数量
 	physHugePageSize = getHugePageSize()
 	osArchInit()
 }

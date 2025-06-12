@@ -350,18 +350,18 @@ ok:
 	MOVL	AX, 0(SP)
 	MOVQ	32(SP), AX		// copy argv
 	MOVQ	AX, 8(SP)
-	CALL	runtime·args(SB)
-	CALL	runtime·osinit(SB)
-	CALL	runtime·schedinit(SB)
+	CALL	runtime·args(SB)        // 将参数(argc和argv)保存到全局变量中
+	CALL	runtime·osinit(SB)      // 初始化操作系统相关参数，不同系统调用的函数位置不同,Linux 在runtime/os_linux.go中定义
+	CALL	runtime·schedinit(SB)   // 初始化调度器
 
 	// create a new goroutine to start program
 	MOVQ	$runtime·mainPC(SB), AX		// entry // 把runtime.main函数句柄存起来
 	PUSHQ	AX                          // 把runtime.main函数句柄加入参数列表里，栈顶(runtime·newproc(SB)的第一个参数)
-	CALL	runtime·newproc(SB)         // 执行newproc函数创建逻辑处理p,创建第一个go协成，方法是runtime.main函数
+	CALL	runtime·newproc(SB)         // 执行newproc函数创建逻辑处理p,创建G调用runtime·main程序主函数,此时只是创建，没有执行，会通过mstart执行
 	POPQ	AX                          // 取出上面的参数位置，可以理解为引用传递
 
 	// start this M
-	CALL	runtime·mstart(SB)          // 执行mstart函数启动调度,这个是用不返回的。
+	CALL	runtime·mstart(SB)          // 启动主线程，执行调度器，函数永不返回
 
 	CALL	runtime·abort(SB)	// mstart should never return
 	RET
