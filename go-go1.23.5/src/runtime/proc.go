@@ -4061,7 +4061,7 @@ top:
 		goto top
 	}
 
-	execute(gp, inheritTime)
+	execute(gp, inheritTime) // 执行g协程
 }
 
 // dropg removes the association between m and the current goroutine m->curg (gp for short).
