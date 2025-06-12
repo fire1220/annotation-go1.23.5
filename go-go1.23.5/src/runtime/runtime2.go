@@ -321,6 +321,8 @@ func setMNoWB(mp **m, new *m) {
 	(*muintptr)(unsafe.Pointer(mp)).set(new)
 }
 
+// 保存协成寄存器的状态和执行上下文
+// 用于支持在调度时上下文切换
 type gobuf struct {
 	// The offsets of sp, pc, and g are known to (hard-coded in) libmach.
 	//
@@ -334,13 +336,13 @@ type gobuf struct {
 	// and restores it doesn't need write barriers. It's still
 	// typed as a pointer so that any other writes from Go get
 	// write barriers.
-	sp   uintptr
-	pc   uintptr
-	g    guintptr
-	ctxt unsafe.Pointer
-	ret  uintptr
-	lr   uintptr
-	bp   uintptr // for framepointer-enabled architectures
+	sp   uintptr        // 栈指针
+	pc   uintptr        // 程序计数器，存储要执行函数的指针位置
+	g    guintptr       // 关联当前协程
+	ctxt unsafe.Pointer // 保存上下文函数指针，需GC跟踪但由汇编操作
+	ret  uintptr        // 返回值指针
+	lr   uintptr        // 链接寄存器（Link Register, LR）用于存储函数调用返回地址的寄存器,就是函数执行完成后返回的栈地址
+	bp   uintptr        // 栈针基地址，帧指针（Frame Pointer）寄存器，指向当前函数调用栈帧的基地址，帮助在调用栈中进行回溯和调试 // for framepointer-enabled architectures
 }
 
 // sudog (pseudo-g) represents a g in a wait list, such as for sending/receiving
@@ -408,9 +410,10 @@ type libcall struct {
 // Stack describes a Go execution stack.
 // The bounds of the stack are exactly [lo, hi),
 // with no implicit data structures on either side.
+// 栈边界
 type stack struct {
-	lo uintptr
-	hi uintptr
+	lo uintptr // 低地址
+	hi uintptr // 高地址
 }
 
 // heldLockInfo gives info on a held lock and the rank of that lock
@@ -428,13 +431,13 @@ type g struct {
 	// It is stack.lo+StackGuard on g0 and gsignal stacks.
 	// It is ~0 on other goroutine stacks, to trigger a call to morestackc (and crash).
 	stack       stack   // offset known to runtime/cgo
-	stackguard0 uintptr // offset known to liblink
+	stackguard0 uintptr // 爆栈警戒线 // offset known to liblink
 	stackguard1 uintptr // offset known to liblink
 
 	_panic    *_panic // innermost panic - offset known to liblink
 	_defer    *_defer // innermost defer
 	m         *m      // current m; offset known to arm liblink
-	sched     gobuf
+	sched     gobuf   // 切换上下文时用于保存现场（寄存器信息）, 保存当前协程的运行环境
 	syscallsp uintptr // if status==Gsyscall, syscallsp = sched.sp to use during gc
 	syscallpc uintptr // if status==Gsyscall, syscallpc = sched.pc to use during gc
 	syscallbp uintptr // if status==Gsyscall, syscallbp = sched.bp to use in fpTraceback
@@ -567,12 +570,12 @@ type m struct {
 	_       uint32 // align next field to 8 bytes
 
 	// Fields not known to debuggers.
-	procid     uint64            // for debuggers, but offset not hard-coded
+	procid     uint64            // 进程ID,用于调试和异步抢占 // for debuggers, but offset not hard-coded
 	gsignal    *g                // 专门用于处理信号的g // signal-handling g
 	goSigStack gsignalStack      // Go-allocated signal handling stack
 	sigmask    sigset            // storage for saved signal mask
 	tls        [tlsSlots]uintptr // thread-local storage (for x86 extern register)
-	mstartfn   func()
+	mstartfn   func()            // 创建m时传入的函数，在启动m时会执行，一般用于m的初始化工作
 	//	curg 值情况：(就是TLS中获取的)
 	//		1.用户g：大多数情况下，curg 指向当前线程（M）上正在执行的普通 goroutine。
 	//		2.g0：当线程进入调度阶段或执行系统调用时，curg 会切换到 g0。因此，在这些情况下，curg 可以是指向 g0 的指针。

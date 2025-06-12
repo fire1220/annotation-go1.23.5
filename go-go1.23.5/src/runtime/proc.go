@@ -168,9 +168,9 @@ func main() {
 	// Allow newproc to start new Ms.
 	mainStarted = true
 
-	if haveSysmon {
+	if haveSysmon { // 是否存在系统监控函数
 		systemstack(func() {
-			newm(sysmon, nil, -1)
+			newm(sysmon, nil, -1) // 创建一个m,启动m时会执行sysmon系统监控函数
 		})
 	}
 
@@ -1761,12 +1761,15 @@ func mstart()
 // May run during STW (because it doesn't have a P yet), so write
 // barriers are not allowed.
 //
+// 注释：启动主线程
+//
 //go:nosplit
 //go:nowritebarrierrec
 func mstart0() {
-	gp := getg()
+	gp := getg() // 获取当前 Goroutine，此时是g0
 
-	osStack := gp.stack.lo == 0
+	osStack := gp.stack.lo == 0 // 判断是否是系统栈
+	// 设置系统栈边界
 	if osStack {
 		// Initialize stack bounds from system stack.
 		// Cgo may have left stack size in stack.hi.
@@ -1785,11 +1788,11 @@ func mstart0() {
 	}
 	// Initialize stack guard so that we can start calling regular
 	// Go code.
-	gp.stackguard0 = gp.stack.lo + stackGuard
+	gp.stackguard0 = gp.stack.lo + stackGuard // 设置爆栈警戒线
 	// This is the g0, so we can also call go:systemstack
 	// functions, which check stackguard1.
 	gp.stackguard1 = gp.stackguard0
-	mstart1()
+	mstart1() // 执行主线程
 
 	// Exit this thread.
 	if mStackIsSystemAllocated() {
@@ -1804,11 +1807,13 @@ func mstart0() {
 // The go:noinline is to guarantee the getcallerpc/getcallersp below are safe,
 // so that we can set up g0.sched to return to the call of mstart1 above.
 //
+// 程序主线程
+//
 //go:noinline
 func mstart1() {
 	gp := getg()
 
-	if gp != gp.m.g0 {
+	if gp != gp.m.g0 { // 只有g0才能执行
 		throw("bad runtime·mstart")
 	}
 
@@ -1818,19 +1823,21 @@ func mstart1() {
 	// so other calls can reuse the current frame.
 	// And goexit0 does a gogo that needs to return from mstart1
 	// and let mstart0 exit the thread.
-	gp.sched.g = guintptr(unsafe.Pointer(gp))
-	gp.sched.pc = getcallerpc()
-	gp.sched.sp = getcallersp()
+	gp.sched.g = guintptr(unsafe.Pointer(gp)) // 保存当前G(就是g0)
+	gp.sched.pc = getcallerpc()               // 获取寄存器pc值，存储的是要执行函数的指针，用于跳出要执行的函数
+	gp.sched.sp = getcallersp()               // 设置栈针基地址
 
 	asminit()
-	minit()
+	minit() // 初始化线程
 
 	// Install signal handlers; after minit so that minit can
 	// prepare the thread to be able to handle the signals.
 	if gp.m == &m0 {
-		mstartm0()
+		mstartm0() // 是m0时单独处理
 	}
 
+	// 如果有设置初始化函数，则执行初始化函数
+	// 初始化函数是在newm创建m时设置的
 	if fn := gp.m.mstartfn; fn != nil {
 		fn()
 	}
@@ -1839,7 +1846,7 @@ func mstart1() {
 		acquirep(gp.m.nextp.ptr())
 		gp.m.nextp = 0
 	}
-	schedule()
+	schedule() // 启动调度器
 }
 
 // mstartm0 implements part of mstart1 that only runs on the m0.

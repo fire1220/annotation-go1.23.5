@@ -389,7 +389,7 @@ func minit() {
 	// Cgo-created threads and the bootstrap m are missing a
 	// procid. We need this for asynchronous preemption and it's
 	// useful in debuggers.
-	getg().m.procid = uint64(gettid())
+	getg().m.procid = uint64(gettid()) // 获取进程id
 }
 
 // Called from dropm to undo the effect of an minit.
