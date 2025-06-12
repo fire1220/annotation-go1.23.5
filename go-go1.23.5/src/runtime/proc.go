@@ -6842,7 +6842,7 @@ func runqget(pp *p) (gp *g, inheritTime bool) {
 	// If the runnext is non-0 and the CAS fails, it could only have been stolen by another P,
 	// because other Ps can race to set runnext to 0, but only the current P can set it to non-0.
 	// Hence, there's no need to retry this CAS if it fails.
-	if next != 0 && pp.runnext.cas(next, 0) {
+	if next != 0 && pp.runnext.cas(next, 0) { // 如果本地队列中有下一个要执行的g则返回该g,并清空runnext(下个要执行的g)
 		return next.ptr(), true
 	}
 
