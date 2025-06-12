@@ -3972,6 +3972,7 @@ func injectglist(glist *gList) {
 
 // One round of scheduler: find a runnable goroutine and execute it.
 // Never returns.
+// 注释：调度器函数
 func schedule() {
 	mp := getg().m
 
