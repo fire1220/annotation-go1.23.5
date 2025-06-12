@@ -269,6 +269,7 @@ needtls:
 	CALL	runtime·abort(SB)
 ok:
     // 真正开始执行，上面是根据不同架构初始化数据
+    // g0和m0是全局变量
 	// set the per-goroutine and per-mach "registers"
 	get_tls(BX)
 	LEAQ	runtime·g0(SB), CX
