@@ -29,7 +29,7 @@ type finblock struct {
 	fin     [(_FinBlockSize - 2*goarch.PtrSize - 2*4) / unsafe.Sizeof(finalizer{})]finalizer
 }
 
-var fingStatus atomic.Uint32
+var fingStatus atomic.Uint32 // 终结器协程状态
 
 // finalizer goroutine status.
 const (
@@ -41,7 +41,7 @@ const (
 )
 
 var finlock mutex  // protects the following variables
-var fing *g        // goroutine that runs finalizers
+var fing *g        // 用于运行终结器(finalizer)(是一种机制，用于在对象被垃圾回收器（GC）回收之前执行一些清理操作（例如关闭文件、释放外部资源等））// goroutine that runs finalizers
 var finq *finblock // list of finalizers that are to be executed
 var finc *finblock // cache of free blocks
 var finptrmask [_FinBlockSize / goarch.PtrSize / 8]byte
@@ -152,7 +152,7 @@ func iterate_finq(callback func(*funcval, unsafe.Pointer, uintptr, *_type, *ptrt
 
 func wakefing() *g {
 	if ok := fingStatus.CompareAndSwap(fingCreated|fingWait|fingWake, fingCreated); ok {
-		return fing
+		return fing // 返回终结器协程,用于处理GC的收尾工作
 	}
 	return nil
 }

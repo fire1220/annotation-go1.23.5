@@ -3313,9 +3313,9 @@ top:
 	// Otherwise two goroutines can completely occupy the local runqueue
 	// by constantly respawning each other.
 	// 偶尔扫描全局队列,保证公平性
-	if pp.schedtick%61 == 0 && sched.runqsize > 0 {
+	if pp.schedtick%61 == 0 && sched.runqsize > 0 { // 每调度61次并且全局队列有任务，则从全局队列中获取一个任务
 		lock(&sched.lock)
-		gp := globrunqget(pp, 1)
+		gp := globrunqget(pp, 1) // 从全局队列中获取一个任务
 		unlock(&sched.lock)
 		if gp != nil {
 			return gp, false, false
@@ -3323,8 +3323,8 @@ top:
 	}
 
 	// Wake up the finalizer G.
-	if fingStatus.Load()&(fingWait|fingWake) == fingWait|fingWake {
-		if gp := wakefing(); gp != nil {
+	if fingStatus.Load()&(fingWait|fingWake) == fingWait|fingWake { // 如果终结器协程状态是"等待"并且"需要唤醒"
+		if gp := wakefing(); gp != nil { // 返回终结器协程,用于处理GC的收尾工作
 			ready(gp, 0, true)
 		}
 	}
@@ -3340,7 +3340,7 @@ top:
 	// global runq
 	if sched.runqsize != 0 { // 在全局队列中的任务
 		lock(&sched.lock)
-		gp := globrunqget(pp, 0)
+		gp := globrunqget(pp, 0) // 全局队列中获取G
 		unlock(&sched.lock)
 		if gp != nil {
 			return gp, false, false
@@ -3354,8 +3354,8 @@ top:
 	// blocked thread (e.g. it has already returned from netpoll, but does
 	// not set lastpoll yet), this thread will do blocking netpoll below
 	// anyway.
-	if netpollinited() && netpollAnyWaiters() && sched.lastpoll.Load() != 0 {
-		if list, delta := netpoll(0); !list.empty() { // non-blocking
+	if netpollinited() && netpollAnyWaiters() && sched.lastpoll.Load() != 0 { // 尝试从网络套接字中获取g
+		if list, delta := netpoll(0); !list.empty() { // 尝试从网络轮询中获取G // non-blocking
 			gp := list.pop()
 			injectglist(&list)
 			netpollAdjustWaiters(delta)
@@ -3379,7 +3379,7 @@ top:
 			mp.becomeSpinning()
 		}
 
-		gp, inheritTime, tnow, w, newWork := stealWork(now)
+		gp, inheritTime, tnow, w, newWork := stealWork(now) // 从其他队列偷g
 		if gp != nil {
 			// Successfully stole.
 			return gp, inheritTime, false

@@ -822,8 +822,8 @@ type schedt struct {
 	needspinning atomic.Uint32 // See "Delicate dance" comment in proc.go. Boolean. Must hold sched.lock to set to 1.
 
 	// Global runnable queue.
-	runq     gQueue
-	runqsize int32
+	runq     gQueue // 全局G队列
+	runqsize int32  // 全局队列个数
 
 	// disable controls selective disabling of the scheduler.
 	//
