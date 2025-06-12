@@ -3255,6 +3255,13 @@ func execute(gp *g, inheritTime bool) {
 // Tries to steal from other P's, get g from local or global queue, poll network.
 // tryWakeP indicates that the returned goroutine is not normal (GC worker, trace
 // reader) so the caller should try to wake a P.
+//
+//	注释：当前线程（M）寻找一个可以运行的 G, 该函数是 Go 调度器核心之一，实现调度循环中的“找任务”环节
+//	1.优先处理特殊任务：如 trace reader、GC worker(后台标记的g)。
+//	2.检查本地和全局队列：获取待运行的 Goroutine。
+//	3.尝试网络轮询：非阻塞地查找是否有 I/O 就绪事件。
+//	4.窃取其他 P 的工作：通过 work-stealing 提高负载均衡。
+//	5.空闲时处理 GC 或进入休眠：若无任务，可能执行 GC 标记或让线程休眠等待唤醒。
 func findRunnable() (gp *g, inheritTime, tryWakeP bool) {
 	mp := getg().m
 
@@ -3279,6 +3286,7 @@ top:
 	now, pollUntil, _ := pp.timers.check(0)
 
 	// Try to schedule the trace reader.
+	// 如果开启或正在关闭调度跟踪，则从调度器中获取一个任务
 	if traceEnabled() || traceShuttingDown() {
 		gp := traceReader()
 		if gp != nil {
@@ -3294,7 +3302,7 @@ top:
 
 	// Try to schedule a GC worker.
 	if gcBlackenEnabled != 0 {
-		gp, tnow := gcController.findRunnableGCWorker(pp, now)
+		gp, tnow := gcController.findRunnableGCWorker(pp, now) // 获取一个 GC worker，执行后台标记
 		if gp != nil {
 			return gp, false, true
 		}
@@ -3304,6 +3312,7 @@ top:
 	// Check the global runnable queue once in a while to ensure fairness.
 	// Otherwise two goroutines can completely occupy the local runqueue
 	// by constantly respawning each other.
+	// 偶尔扫描全局队列,保证公平性
 	if pp.schedtick%61 == 0 && sched.runqsize > 0 {
 		lock(&sched.lock)
 		gp := globrunqget(pp, 1)
@@ -3324,12 +3333,12 @@ top:
 	}
 
 	// local runq
-	if gp, inheritTime := runqget(pp); gp != nil {
+	if gp, inheritTime := runqget(pp); gp != nil { // 在本地队列中获取一个任务
 		return gp, inheritTime, false
 	}
 
 	// global runq
-	if sched.runqsize != 0 {
+	if sched.runqsize != 0 { // 在全局队列中的任务
 		lock(&sched.lock)
 		gp := globrunqget(pp, 0)
 		unlock(&sched.lock)
@@ -3974,13 +3983,13 @@ func injectglist(glist *gList) {
 // Never returns.
 // 注释：调度器函数
 func schedule() {
-	mp := getg().m
+	mp := getg().m // 获取当前m，当前g绑定的m
 
 	if mp.locks != 0 {
 		throw("schedule: holding locks")
 	}
 
-	if mp.lockedg != 0 {
+	if mp.lockedg != 0 { // 如果有锁定的协程则立刻执行该协程
 		stoplockedm()
 		execute(mp.lockedg.ptr(), false) // Never returns.
 	}
@@ -3992,7 +4001,7 @@ func schedule() {
 	}
 
 top:
-	pp := mp.p.ptr()
+	pp := mp.p.ptr() // g 对应p队列指针
 	pp.preempt = false
 
 	// Safety check: if we are spinning, the run queue should be empty.
@@ -4002,7 +4011,7 @@ top:
 		throw("schedule: spinning with local work")
 	}
 
-	gp, inheritTime, tryWakeP := findRunnable() // blocks until work is available
+	gp, inheritTime, tryWakeP := findRunnable() // 寻找可以执行的g // blocks until work is available
 
 	if debug.dontfreezetheworld > 0 && freezing.Load() {
 		// See comment in freezetheworld. We don't want to perturb

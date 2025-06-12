@@ -907,6 +907,14 @@ func readTrace0() (buf []byte, park bool) {
 //
 // This must run on the system stack because it acquires trace.lock.
 //
+//	注释：负责读取和输出执行跟踪（trace）数据的G，是用于Go调度器内部用于支持性能追踪机制的一个特殊 Goroutine。
+//	作用：当 Go 程序启用了执行追踪（通过 runtime/trace 包），会有一个专门的 Goroutine 被调度来读取当前程序的 trace 事件，并将这些事件写入到输出文件或标准输出中。
+//	调用点：在调度器中，findRunnable 函数优先检测是否有 trace reader 需要调度，以确保 trace 数据能够及时被处理。
+//	特点：
+//		它是一个特殊的 G（Goroutine），不是用户编写的任务。
+//		它的调度具有较高优先级，以避免 trace 数据堆积。
+//	触发时机：当使用 trace.Start() 开始追踪、或正在关闭追踪（trace.Shutdown()）时，trace reader 可能会被唤醒。
+//
 //go:systemstack
 func traceReader() *g {
 	gp := traceReaderAvailable()

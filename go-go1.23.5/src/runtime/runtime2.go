@@ -436,7 +436,7 @@ type g struct {
 
 	_panic    *_panic // innermost panic - offset known to liblink
 	_defer    *_defer // innermost defer
-	m         *m      // current m; offset known to arm liblink
+	m         *m      // 当前的m // current m; offset known to arm liblink
 	sched     gobuf   // 切换上下文时用于保存现场（寄存器信息）, 保存当前协程的运行环境
 	syscallsp uintptr // if status==Gsyscall, syscallsp = sched.sp to use during gc
 	syscallpc uintptr // if status==Gsyscall, syscallpc = sched.pc to use during gc
@@ -458,7 +458,7 @@ type g struct {
 	param        unsafe.Pointer
 	atomicstatus atomic.Uint32
 	stackLock    uint32 // sigprof/scang lock; TODO: fold in to atomicstatus
-	goid         uint64
+	goid         uint64 // 协程id
 	schedlink    guintptr
 	waitsince    int64      // approx time when the g become blocked
 	waitreason   waitReason // if status==Gwaiting
@@ -611,7 +611,7 @@ type m struct {
 	park            note
 	alllink         *m // on allm
 	schedlink       muintptr
-	lockedg         guintptr
+	lockedg         guintptr    // 存放锁定的g协程，下次调度的时候，如果该值存在，则立刻执行该协程
 	createstack     [32]uintptr // stack that created this thread, it's used for StackRecord.Stack0, so it must align with it.
 	lockedExt       uint32      // tracking for external LockOSThread
 	lockedInt       uint32      // tracking for internal lockOSThread
@@ -787,7 +787,7 @@ type p struct {
 
 	// preempt is set to indicate that this P should be enter the
 	// scheduler ASAP (regardless of what G is running on it).
-	preempt bool
+	preempt bool // 抢占标记
 
 	// gcStopTime is the nanotime timestamp that this P last entered _Pgcstop.
 	gcStopTime int64

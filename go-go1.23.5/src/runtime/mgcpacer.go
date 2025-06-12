@@ -738,6 +738,7 @@ func (c *gcControllerState) enlistWorker() {
 
 // findRunnableGCWorker returns a background mark worker for pp if it
 // should be run. This must only be called when gcBlackenEnabled != 0.
+// 注释：从全局的后台标记工作池中弹出一个可用的工作节点，用于执行垃圾回收的后台标记任务
 func (c *gcControllerState) findRunnableGCWorker(pp *p, now int64) (*g, int64) {
 	if gcBlackenEnabled == 0 {
 		throw("gcControllerState.findRunnable: blackening not enabled")
@@ -763,7 +764,7 @@ func (c *gcControllerState) findRunnableGCWorker(pp *p, now int64) (*g, int64) {
 	}
 
 	// Grab a worker before we commit to running below.
-	node := (*gcBgMarkWorkerNode)(gcBgMarkWorkerPool.pop())
+	node := (*gcBgMarkWorkerNode)(gcBgMarkWorkerPool.pop()) // 从全局的后台标记工作池中弹出一个可用的工作节点，用于执行垃圾回收的后台标记任务
 	if node == nil {
 		// There is at least one worker per P, so normally there are
 		// enough workers to run on all Ps, if necessary. However, once

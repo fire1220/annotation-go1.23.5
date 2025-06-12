@@ -339,6 +339,11 @@ func init() {
 
 // wantAsyncPreempt returns whether an asynchronous preemption is
 // queued for gp.
+//
+//	注释：判断是否对某个协程 gp 进行异步抢占
+//	1.若 gp.preempt 为真，表示已标记需抢占；
+//	2.或其绑定的处理器 p 的 preempt 标志为真；
+//	3.且该协程当前状态为运行中（_Grunning），则返回 true。
 func wantAsyncPreempt(gp *g) bool {
 	// Check both the G and the P.
 	return (gp.preempt || gp.m.p != 0 && gp.m.p.ptr().preempt) && readgstatus(gp)&^_Gscan == _Grunning
