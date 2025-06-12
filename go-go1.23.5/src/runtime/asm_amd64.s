@@ -356,7 +356,7 @@ ok:
 
 	// create a new goroutine to start program
 	MOVQ	$runtime·mainPC(SB), AX		// entry // 把runtime.main函数句柄存起来
-	PUSHQ	AX                          // 把runtime.main函数句柄加入队列里
+	PUSHQ	AX                          // 把runtime.main函数句柄加入参数列表里，栈顶(runtime·newproc(SB)的第一个参数)
 	CALL	runtime·newproc(SB)         // 执行newproc函数创建逻辑处理p
 	POPQ	AX
 
