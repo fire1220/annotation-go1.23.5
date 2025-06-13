@@ -38,12 +38,12 @@ const (
 
 	// _Grunnable means this goroutine is on a run queue. It is
 	// not currently executing user code. The stack is not owned.
-	_Grunnable // 1
+	_Grunnable // 1 // 可运行状态
 
 	// _Grunning means this goroutine may execute user code. The
 	// stack is owned by this goroutine. It is not on a run queue.
 	// It is assigned an M and a P (g.m and g.m.p are valid).
-	_Grunning // 2
+	_Grunning // 2 // 运行中状态
 
 	// _Gsyscall means this goroutine is executing a system call.
 	// It is not executing user code. The stack is owned by this
@@ -869,7 +869,7 @@ type schedt struct {
 	safePointWait int32
 	safePointNote note
 
-	profilehz int32 // cpu profiling rate
+	profilehz int32 // CPU 性能分析（profiling）的采样频率，单位是 Hz（每秒采样次数）。数值越大，采样越频繁，性能开销也越高。通常用于调试和性能优化场景 // cpu profiling rate
 
 	procresizetime int64 // nanotime() of last change to gomaxprocs
 	totaltime      int64 // ∫gomaxprocs dt up to procresizetime

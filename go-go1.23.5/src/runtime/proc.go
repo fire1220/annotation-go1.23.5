@@ -3215,7 +3215,7 @@ func gcstopm() {
 //
 //go:yeswritebarrierrec
 func execute(gp *g, inheritTime bool) {
-	mp := getg().m
+	mp := getg().m // 获取当前线程M
 
 	if goroutineProfile.active {
 		// Make sure that gp has had its stack written out to the goroutine
@@ -3226,9 +3226,9 @@ func execute(gp *g, inheritTime bool) {
 
 	// Assign gp.m before entering _Grunning so running Gs have an
 	// M.
-	mp.curg = gp
-	gp.m = mp
-	casgstatus(gp, _Grunnable, _Grunning)
+	mp.curg = gp                          // 线程m绑定要执行的g
+	gp.m = mp                             // g绑定线程m
+	casgstatus(gp, _Grunnable, _Grunning) // 设置g状态为运行中
 	gp.waitsince = 0
 	gp.preempt = false
 	gp.stackguard0 = gp.stack.lo + stackGuard
