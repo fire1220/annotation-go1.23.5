@@ -1072,7 +1072,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 	if mp.gsignal == getg() { // gsignal是专门用处理信号的G，如果当前G是gsignal，则抛出异常
 		throw("malloc during signal")
 	}
-	mp.mallocing = 1 // 标记开发分配
+	mp.mallocing = 1 // 标记开始分配
 
 	shouldhelpgc := false
 	dataSize := userSize
