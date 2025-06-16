@@ -55,6 +55,10 @@ func (c *mcentral) init(spc spanClass) {
 
 // partialUnswept returns the spanSet which holds partially-filled
 // unswept spans for this sweepgen.
+// 注释：每两个为一组（舍去一位然后取模）
+// 注释：sweepgena为GC清理计数器，partial是有空闲的数组数据，数组有两个元素，分别是已清理和未清理数据，会根据清理计数器实现位置调换
+// 注释：未清理是根据清理计数器（清理版本）计算出来的，把partial分为两组，每次清理开始处自增2，调换已清理和为清理的位置进行清理动作，执行未清理数据的清理工作
+// 注释：【有空闲、未清理】部分未清
 func (c *mcentral) partialUnswept(sweepgen uint32) *spanSet {
 	return &c.partial[1-sweepgen/2%2]
 }
@@ -62,18 +66,26 @@ func (c *mcentral) partialUnswept(sweepgen uint32) *spanSet {
 // partialSwept returns the spanSet which holds partially-filled
 // swept spans for this sweepgen.
 // 注释：【有可用空间】【已清理】中拿span
+// 注释：sweepgena为GC扫描的计数器，每次GC扫描完成后自增2，实现已扫描和未扫描的数组下标切换
+// 注释：【有空闲、已清理】部分清扫
 func (c *mcentral) partialSwept(sweepgen uint32) *spanSet {
 	return &c.partial[sweepgen/2%2]
 }
 
 // fullUnswept returns the spanSet which holds unswept spans without any
 // free slots for this sweepgen.
+// 注释：sweepgena为GC扫描的计数器，每次GC扫描完成后自增2，实现已扫描和未扫描的数组下标切换
+// 注释：【无空闲、已清理】全部未清扫
 func (c *mcentral) fullUnswept(sweepgen uint32) *spanSet {
 	return &c.full[1-sweepgen/2%2]
 }
 
 // fullSwept returns the spanSet which holds swept spans without any
 // free slots for this sweepgen.
+// 注释：无空闲并且被GC扫描的span
+// 注释：每两个为一组（舍去一位然后取模）
+// 注释：sweepgena为GC扫描的计数器，每次GC扫描完成后自增2，实现已扫描和未扫描的数组下标切换
+// 注释：【无空闲、已扫描】全部清扫
 func (c *mcentral) fullSwept(sweepgen uint32) *spanSet {
 	return &c.full[sweepgen/2%2]
 }
