@@ -976,7 +976,7 @@ func (h *mheap) reclaimChunk(arenas []arenaIdx, pageIdx, n uintptr) uintptr {
 type spanAllocType uint8 // 进行、释放的分配类型
 
 const (
-	spanAllocHeap          spanAllocType = iota // heap span
+	spanAllocHeap          spanAllocType = iota // 堆分配 //  heap span
 	spanAllocStack                              // 栈分配 //  stack span
 	spanAllocPtrScalarBits                      // unrolled GC prog bitmap span
 	spanAllocWorkBuf                            // work buf span
